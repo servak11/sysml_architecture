@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SysML BDD Editor (Dark Mode)</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --canvas-bg: #2d2d2d;
+            --border-color: #555;
+            --text-color: #e0e0e0;
+            --accent-color: #007acc;
+            --selected-color: #ff9900;
+            --danger-color: #ff3333;
+            --port-color: #4caf50;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Fixed Global Icon Toolbar */
+        #toolbar {
+            height: 45px;
+            background-color: #111;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 1px solid var(--border-color);
+            gap: 10px;
+            box-sizing: border-box;
+        }
+
+        #toolbar h1 {
+            font-size: 15px;
+            margin: 0;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-right: 20px;
+            color: #aaa;
+        }
+
+        .tool-btn {
+            background-color: #2d2d2d;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .tool-btn:hover {
+            background-color: #404040;
+        }
+
+        .tool-btn:disabled {
+            opacity: 0.2;
+            cursor: not-allowed;
+        }
+
+        #btn-delete:hover:not(:disabled) {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+            color: #fff;
+        }
+
+        #canvas {
+            width: 100vw;
+            height: calc(100vh - 45px);
+            background-color: var(--canvas-bg);
+            background-image: 
+                linear-gradient(to right, #3a3a3a 1px, transparent 1px),
+                linear-gradient(to bottom, #3a3a3a 1px, transparent 1px);
+            background-size: 20px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Block Styling */
+        .block {
+            position: absolute;
+            background-color: #252526;
+            border: 2px solid var(--text-color);
+            color: var(--text-color);
+            box-sizing: border-box;
+            cursor: move;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 8px;
+            border-radius: 3px;
+            z-index: 2;
+        }
+
+        .block .stereotype {
+            font-size: 10px;
+            color: #888;
+            font-style: italic;
+            pointer-events: none;
+        }
+
+        .block .text {
+            font-size: 13px;
+            font-weight: bold;
+            margin-top: 6px;
+            text-align: center;
+            width: 100%;
+            word-break: break-all;
+            outline: none;
+            pointer-events: none; /* Controlled dynamically by JS edit cycles */
+        }
+
+        /* Selection Borders */
+        .block.selected {
+            border: 2px dashed var(--selected-color);
+        }
+
+        /* Border Ports */
+        .port {
+            width: 12px;
+            height: 12px;
+            background-color: var(--port-color);
+            position: absolute;
+            border: 1px solid #fff;
+            cursor: pointer;
+            z-index: 10;
+            box-sizing: border-box;
+        }
+
+        .port.selected {
+            background-color: var(--selected-color);
+            box-shadow: 0 0 6px var(--selected-color);
+        }
+
+        /* SVG Rendering Layer */
+        #svg-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .connection-wrapper {
+            cursor: pointer;
+            pointer-events: visibleStroke;
+        }
+
+        .connection-bg-line {
+            stroke: transparent;
+            stroke-width: 12;
+            fill: none;
+        }
+
+        .connection-line {
+            stroke: var(--text-color);
+            stroke-width: 2;
+            fill: none;
+            transition: stroke 0.1s;
+        }
+
+        .connection-wrapper:hover .connection-line {
+            stroke: #aaa;
+        }
+
+        .connection-wrapper.selected .connection-line {
+            stroke: var(--selected-color);
+            stroke-dasharray: 4;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toolbar">
+        <h1>SysML BDD</h1>
+        <button id="btn-undo" class="tool-btn" title="Undo">↶</button>
+        <button id="btn-delete" class="tool-btn" title="Delete">🗑</button>
+        <button id="btn-grow" class="tool-btn" title="Increase Size" disabled>＋</button>
+        <button id="btn-shrink" class="tool-btn" title="Decrease Size" disabled>－</button>
+    </div>
+    
+    <div id="canvas">
+        <svg id="svg-layer"></svg>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const svgLayer = document.getElementById('svg-layer');
+        const btnUndo = document.getElementById('btn-undo');
+        const btnDelete = document.getElementById('btn-delete');
+        const btnGrow = document.getElementById('btn-grow');
+        const btnShrink = document.getElementById('btn-shrink');
+        
+        let selectedType = null; 
+        let selectedId = null;
+        
+        let isDragging = false;
+        let dragTargetId = null;
+        let dragStartX, dragStartY;
+        
+        let blockCounter = 0;
+        let portCounter = 0;
+        let connCounter = 0;
+
+        let blocks = {};
+        let ports = {};
+        let connections = {};
+
+        const historyStack = [];
+        const STORAGE_KEY = 'sysml_bdd_diagram_state';
+
+        // --- Core Events ---
+        canvas.addEventListener('click', onCanvasClick);
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        btnDelete.addEventListener('click', deleteSelected);
+        btnUndo.addEventListener('click', popHistory);
+        btnGrow.addEventListener('click', () => resizeBlock(20, 15));
+        btnShrink.addEventListener('click', () => resizeBlock(-20, -15));
+
+        // Initialization
+        window.addEventListener('DOMContentLoaded', loadFromStorage);
+
+        // --- Storage & History Infrastructure ---
+        function serializeState() {
+            const state = {
+                blockCounter, portCounter, connCounter,
+                blocks, ports,
+                connections: {}
+            };
+            for (let id in connections) {
+                state.connections[id] = {
+                    id: connections[id].id,
+                    from: connections[id].from,
+                    to: connections[id].to
+                };
+            }
+            return state;
+        }
+
+        function saveState() {
+            const stateString = JSON.stringify(serializeState());
+            localStorage.setItem(STORAGE_KEY, stateString);
+        }
+
+        function checkpointAction() {
+            const snapshot = JSON.parse(JSON.stringify(serializeState()));
+            historyStack.push(snapshot);
+            btnUndo.disabled = false;
+            saveState();
+        }
+
+        function loadFromStorage() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (!stored) {
+                btnUndo.disabled = true;
+                return;
+            }
+            renderFromStateString(stored);
+            btnUndo.disabled = historyStack.length === 0;
+        }
+
+        function popHistory() {
+            if (historyStack.length === 0) return;
+            const snapshot = historyStack.pop();
+            renderFromStateObject(snapshot);
+            saveState();
+            if (historyStack.length === 0) btnUndo.disabled = true;
+        }
+
+        function renderFromStateString(jsonString) {
+            renderFromStateObject(JSON.parse(jsonString));
+        }
+
+        function renderFromStateObject(stateObj) {
+            clearSelection();
+            canvas.querySelectorAll('.block').forEach(b => b.remove());
+            svgLayer.innerHTML = '';
+
+            blockCounter = stateObj.blockCounter || 0;
+            portCounter = stateObj.portCounter || 0;
+            connCounter = stateObj.connCounter || 0;
+            ports = stateObj.ports || {};
+            blocks = stateObj.blocks || {};
+            connections = {};
+
+            for (let bId in blocks) {
+                const bData = blocks[bId];
+                const block = document.createElement('div');
+                block.className = 'block';
+                block.id = bId;
+                block.style.left = bData.left;
+                block.style.top = bData.top;
+                block.style.width = bData.width || '130px';
+                block.style.height = bData.height || '80px';
+                block.innerHTML = `<div class="stereotype">«block»</div><div class="text">${bData.text}</div>`;
+                
+                block.addEventListener('mousedown', (e) => onBlockMouseDown(e, bId));
+                block.addEventListener('click', (e) => onBlockClick(e, bId));
+                canvas.appendChild(block);
+                
+                bData.ports.forEach(pId => {
+                    const pData = ports[pId];
+                    const port = document.createElement('div');
+                    port.className = 'port';
+                    port.id = pId;
+                    port.style.left = `calc(${pData.pctX}% - 6px)`;
+                    port.style.top = `calc(${pData.pctY}% - 6px)`;
+                    port.addEventListener('click', (e) => onPortClick(e, pId));
+                    block.appendChild(port);
+                });
+            }
+
+            for (let cId in stateObj.connections) {
+                const cData = stateObj.connections[cId];
+                buildConnectionUI(cData.id, cData.from, cData.to);
+            }
+            updateConnections();
+        }
+
+        // --- Input Interaction Controllers ---
+
+        function onCanvasClick(e) {
+            if (e.target === canvas || e.target === svgLayer) {
+                if (selectedId || selectedType) {
+                    clearSelection();
+                } else {
+                    checkpointAction();
+                    createBlock(e.clientX, e.clientY - 45);
+                }
+            }
+        }
+
+        function createBlock(x, y) {
+            const id = 'block_' + blockCounter++;
+            const block = document.createElement('div');
+            block.className = 'block';
+            block.id = id;
+            block.style.left = (x - 65) + 'px';
+            block.style.top = (y - 40) + 'px';
+            block.style.width = '130px';
+            block.style.height = '80px';
+
+            block.innerHTML = `
+                <div class="stereotype">«block»</div>
+                <div class="text">Block_${blockCounter}</div>
+            `;
+
+            blocks[id] = { 
+                left: block.style.left, 
+                top: block.style.top, 
+                width: block.style.width,
+                height: block.style.height,
+                text: `Block_${blockCounter}`, 
+                ports: [] 
+            };
+
+            block.addEventListener('mousedown', (e) => onBlockMouseDown(e, id));
+            block.addEventListener('click', (e) => onBlockClick(e, id));
+            
+            canvas.appendChild(block);
+            setSelection('block', id);
+            saveState();
+        }
+
+        function onBlockClick(e, id) {
+            e.stopPropagation();
+
+            if (selectedType === 'port') return;
+
+            const blockEl = document.getElementById(id);
+            const textEl = blockEl.querySelector('.text');
+
+            // RULE CHECK: Is this block already selected?
+            if (selectedId === id && selectedType === 'block') {
+                // Yes, allow inline text mutation
+                textEl.style.pointerEvents = 'auto';
+                textEl.contentEditable = "true";
+                textEl.focus();
+                document.execCommand('selectAll', false, null);
+                
+                textEl.addEventListener('blur', () => {
+                    if(blocks[id].text !== textEl.innerText) {
+                        checkpointAction();
+                        blocks[id].text = textEl.innerText;
+                    }
+                    textEl.contentEditable = "false";
+                    textEl.style.pointerEvents = 'none';
+                }, { once: true });
+            } else {
+                // First click strictly highlights selection
+                setSelection('block', id);
+            }
+        }
+
+        function onBlockMouseDown(e, id) {
+            const blockEl = document.getElementById(id);
+            if (e.target.contentEditable === "true") return;
+            
+            if (e.target.classList.contains('port')) return;
+
+            const rect = blockEl.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const borderThresh = 10; 
+
+            // Did they hit a border area?
+            if (x <= borderThresh || x >= rect.width - borderThresh || y <= borderThresh || y >= rect.height - borderThresh) {
+                
+                // NEW OVERLAP RULE: Scan if click coordinates are close to an existing port
+                const OVERLAP_RADIUS = 14; 
+                let matchedPortId = null;
+
+                for (let pId of blocks[id].ports) {
+                    const portEl = document.getElementById(pId);
+                    if (!portEl) continue;
+
+                    // Read local position percentages from styles
+                    const pLeft = portEl.offsetLeft + 6; // Center offset calculation
+                    const pTop = portEl.offsetTop + 6;
+
+                    const distance = Math.hypot(x - pLeft, y - pTop);
+                    if (distance <= OVERLAP_RADIUS) {
+                        matchedPortId = pId;
+                        break;
+                    }
+                }
+
+                e.stopPropagation();
+                e.preventDefault();
+
+                if (matchedPortId) {
+                    // Overlap detected: Route click event directly to select/connect the existing port
+                    onPortClick(e, matchedPortId);
+                } else {
+                    // Safe zone: Create a brand new port cleanly
+                    checkpointAction();
+                    createPort(id, x, y, rect.width, rect.height);
+                }
+                return;
+            }
+
+            // Normal background surface layout dragging controls
+            isDragging = true;
+            dragTargetId = id;
+            dragStartX = e.clientX - parseInt(blockEl.style.left);
+            dragStartY = e.clientY - parseInt(blockEl.style.top);
+            
+            if (selectedType !== 'port' && selectedId !== id) {
+                setSelection('block', id);
+            }
+            e.stopPropagation();
+        }
+
+        function createPort(blockId, x, y, w, h) {
+            const portId = 'port_' + portCounter++;
+            const port = document.createElement('div');
+            port.className = 'port';
+            port.id = portId;
+
+            const distLeft = x;
+            const distRight = w - x;
+            const distTop = y;
+            const distBottom = h - y;
+            const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+
+            let pctX = 50, pctY = 50, edge = 'top';
+
+            if (minDist === distLeft) { pctX = 0; pctY = (y / h) * 100; edge = 'left'; }
+            else if (minDist === distRight) { pctX = 100; pctY = (y / h) * 100; edge = 'right'; }
+            else if (minDist === distTop) { pctX = (x / w) * 100; pctY = 0; edge = 'top'; }
+            else if (minDist === distBottom) { pctX = (x / w) * 100; pctY = 100; edge = 'bottom'; }
+
+            port.style.left = `calc(${pctX}% - 6px)`;
+            port.style.top = `calc(${pctY}% - 6px)`;
+            
+            port.addEventListener('click', (e) => onPortClick(e, portId));
+
+            document.getElementById(blockId).appendChild(port);
+            blocks[blockId].ports.push(portId);
+
+            ports[portId] = { blockId, pctX, pctY, edge };
+            setSelection('port', portId);
+            saveState();
+        }
+
+        function onPortClick(e, id) {
+            if (e) e.stopPropagation();
+            if (selectedType === 'port' && selectedId !== id) {
+                checkpointAction();
+                createConnection(selectedId, id);
+                clearSelection();
+            } else {
+                setSelection('port', id);
+            }
+        }
+
+        function createConnection(portId1, portId2) {
+            if(portId1 === portId2) return;
+            const id = 'conn_' + connCounter++;
+            buildConnectionUI(id, portId1, portId2);
+            updateConnections();
+            saveState();
+        }
+
+        function buildConnectionUI(id, portId1, portId2) {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('class', 'connection-wrapper');
+            g.setAttribute('id', id);
+
+            const bgLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            bgLine.setAttribute('class', 'connection-bg-line');
+            
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            line.setAttribute('class', 'connection-line');
+
+            g.appendChild(bgLine);
+            g.appendChild(line);
+            svgLayer.appendChild(g);
+
+            connections[id] = { id, g, line, bgLine, from: portId1, to: portId2 };
+
+            g.addEventListener('click', (e) => {
+                e.stopPropagation();
+                setSelection('conn', id);
+            });
+        }
+
+        // --- Custom Block Scaling Mechanics ---
+        function resizeBlock(dw, dh) {
+            if (selectedType !== 'block' || !selectedId) return;
+            checkpointAction();
+
+            const el = document.getElementById(selectedId);
+            const currentW = el.offsetWidth;
+            const currentH = el.offsetHeight;
+
+            const newW = Math.max(90, currentW + dw);
+            const newH = Math.max(60, currentH + dh);
+
+            el.style.width = newW + 'px';
+            el.style.height = newH + 'px';
+
+            blocks[selectedId].width = el.style.width;
+            blocks[selectedId].height = el.style.height;
+
+            updateConnections();
+            saveState();
+        }
+
+        // --- Routing Engine Vector Layout Logic ---
+        function updateConnections() {
+            for (let id in connections) {
+                const conn = connections[id];
+                const p1 = getPortAbsolutePos(conn.from);
+                const p2 = getPortAbsolutePos(conn.to);
+                const offsetDistance = 45; 
+                
+                const c1 = getControlPoint(p1.x, p1.y, ports[conn.from].edge, offsetDistance);
+                const c2 = getControlPoint(p2.x, p2.y, ports[conn.to].edge, offsetDistance);
+
+                const pathData = `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`;
+                
+                conn.line.setAttribute('d', pathData);
+                conn.bgLine.setAttribute('d', pathData);
+            }
+        }
+
+        function getControlPoint(x, y, edge, distance) {
+            if (edge === 'left') return { x: x - distance, y: y };
+            if (edge === 'right') return { x: x + distance, y: y };
+            if (edge === 'top') return { x: x, y: y - distance };
+            if (edge === 'bottom') return { x: x, y: y + distance };
+            return { x, y };
+        }
+
+        function getPortAbsolutePos(portId) {
+            const portData = ports[portId];
+            const blockEl = document.getElementById(portData.blockId);
+            if(!blockEl) return { x: 0, y: 0 };
+            
+            const bX = parseInt(blockEl.style.left);
+            const bY = parseInt(blockEl.style.top);
+            const bW = blockEl.offsetWidth;
+            const bH = blockEl.offsetHeight;
+
+            return {
+                x: bX + (bW * (portData.pctX / 100)),
+                y: bY + (bH * (portData.pctY / 100))
+            };
+        }
+
+        // --- Drag Tracking Engine ---
+        function onMouseMove(e) {
+            if (isDragging && dragTargetId) {
+                const blockEl = document.getElementById(dragTargetId);
+                let currentX = e.clientX - dragStartX;
+                let currentY = e.clientY - dragStartY;
+
+                currentX = Math.max(0, Math.min(currentX, canvas.clientWidth - blockEl.offsetWidth));
+                currentY = Math.max(0, Math.min(currentY, canvas.clientHeight - blockEl.offsetHeight));
+
+                blockEl.style.left = currentX + 'px';
+                blockEl.style.top = currentY + 'px';
+                
+                blocks[dragTargetId].left = blockEl.style.left;
+                blocks[dragTargetId].top = blockEl.style.top;
+
+                updateConnections();
+            }
+        }
+
+        // --- Complete Mouse Interaction Lifecycles ---
+        function onMouseUp() {
+            if (isDragging) {
+                isDragging = false;
+                dragTargetId = null;
+                saveState(); 
+            }
+        }
+
+        // --- Selection UI Engine ---
+        function setSelection(type, id) {
+            clearSelection();
+            selectedType = type;
+            selectedId = id;
+
+            if (type === 'block') {
+                document.getElementById(id).classList.add('selected');
+                btnGrow.disabled = false;
+                btnShrink.disabled = false;
+            }
+            if (type === 'port') document.getElementById(id).classList.add('selected');
+            if (type === 'conn') connections[id].g.classList.add('selected');
+
+            btnDelete.disabled = false;
+        }
+
+        function clearSelection() {
+            if (selectedType && selectedId) {
+                const el = document.getElementById(selectedId);
+                if (selectedType === 'block' && el) el.classList.remove('selected');
+                if (selectedType === 'port' && el) el.classList.remove('selected');
+                if (selectedType === 'conn' && connections[selectedId]) connections[selectedId].g.classList.remove('selected');
+            }
+            selectedType = null;
+            selectedId = null;
+            btnDelete.disabled = true;
+            btnGrow.disabled = true;
+            btnShrink.disabled = true;
+        }
+
+        // --- Deletion Core Logic ---
+        function deleteSelected() {
+            if (!selectedType || !selectedId) return;
+            checkpointAction();
+
+            if (selectedType === 'block') deleteBlock(selectedId);
+            if (selectedType === 'port') deletePort(selectedId);
+            if (selectedType === 'conn') deleteConnection(selectedId);
+
+            clearSelection();
+            saveState();
+        }
+
+        function deleteBlock(id) {
+            const portIds = [...blocks[id].ports];
+            portIds.forEach(pId => deletePort(pId));
+            const el = document.getElementById(id);
+            if(el) el.remove();
+            delete blocks[id];
+        }
+
+        function deletePort(id) {
+            for (let cId in connections) {
+                if (connections[cId].from === id || connections[cId].to === id) {
+                    deleteConnection(cId);
+                }
+            }
+            const bId = ports[id].blockId;
+            if (blocks[bId]) {
+                blocks[bId].ports = blocks[bId].ports.filter(p => p !== id);
+            }
+            const portEl = document.getElementById(id);
+            if (portEl) portEl.remove();
+            delete ports[id];
+        }
+
+        function deleteConnection(id) {
+            if (connections[id]) {
+                connections[id].g.remove();
+                delete connections[id];
+            }
+        }
+    </script>
+</body>
+</html>
