@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SysML Parallel BDD/IBD Modeler</title>
+    <title>SysML Parallel BDD/IBD Modeler & Importer</title>
     <style>
         :root {
             --bg-color: #1e1e1e;
@@ -15,6 +15,7 @@
             --selected-color: #ff9900;
             --danger-color: #ff3333;
             --port-color: #4caf50;
+            --sidebar-width: 320px;
         }
 
         body {
@@ -26,6 +27,84 @@
             overflow: hidden;
             user-select: none;
             touch-action: none;
+        }
+
+        #app-container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* SysML Text Import Panel Styling */
+        #import-panel {
+            width: var(--sidebar-width);
+            height: 100%;
+            background-color: #1a1a1a;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            transition: margin-left 0.3s ease;
+            z-index: 10;
+        }
+
+        #import-panel.collapsed {
+            margin-left: calc(-1 * var(--sidebar-width));
+        }
+
+        .panel-header {
+            padding: 12px;
+            background-color: #111;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #txt-import-area {
+            flex: 1;
+            background-color: #252526;
+            color: #a7dbf7;
+            border: none;
+            padding: 12px;
+            font-family: 'Consolas', 'Courier New', Courier, monospace;
+            font-size: 12px;
+            resize: none;
+            outline: none;
+            line-height: 1.5;
+        }
+
+        .panel-footer {
+            padding: 10px;
+            background-color: #111;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .primary-btn {
+            width: 100%;
+            background-color: var(--accent-bdd);
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .primary-btn:hover { background-color: #0062a3; }
+
+        /* Main Workspace Layout */
+        #workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
         }
 
         #toolbar {
@@ -71,22 +150,11 @@
             justify-content: center;
         }
 
-        .tool-btn:disabled {
-            opacity: 0.2;
-            cursor: not-allowed;
-        }
-
-        #btn-action-context {
-            font-size: 11px;
-            width: auto;
-            padding: 0 10px;
-            font-weight: bold;
-            background-color: #333;
-        }
+        .tool-btn:disabled { opacity: 0.2; cursor: not-allowed; }
+        #btn-action-context { font-size: 11px; width: auto; padding: 0 10px; font-weight: bold; background-color: #333; }
 
         #canvas {
-            width: 100vw;
-            height: calc(100vh - 45px);
+            flex: 1;
             background-color: var(--canvas-bg);
             background-image: 
                 linear-gradient(to right, #3a3a3a 1px, transparent 1px),
@@ -112,27 +180,9 @@
             z-index: 2;
         }
 
-        .block .stereotype {
-            font-size: 10px;
-            color: #888;
-            font-style: italic;
-            pointer-events: none;
-        }
-
-        .block .text {
-            font-size: 13px;
-            font-weight: bold;
-            margin-top: 4px;
-            text-align: center;
-            width: 100%;
-            word-break: break-all;
-            outline: none;
-            pointer-events: none;
-        }
-
-        .block.selected {
-            border: 2px dashed var(--selected-color);
-        }
+        .block .stereotype { font-size: 10px; color: #888; font-style: italic; pointer-events: none; }
+        .block .text { font-size: 13px; font-weight: bold; margin-top: 4px; text-align: center; width: 100%; word-break: break-all; outline: none; pointer-events: none; }
+        .block.selected { border: 2px dashed var(--selected-color); }
 
         .port {
             width: 14px;
@@ -145,19 +195,9 @@
             box-sizing: border-box;
             border-radius: 2px;
         }
+        .port.selected { background-color: var(--selected-color); box-shadow: 0 0 6px var(--selected-color); }
 
-        .port.selected {
-            background-color: var(--selected-color);
-            box-shadow: 0 0 6px var(--selected-color);
-        }
-
-        #svg-layer {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 1;
-            pointer-events: none;
-        }
-
+        #svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
         .connection-wrapper { cursor: pointer; pointer-events: visibleStroke; }
         .connection-bg-line { stroke: transparent; stroke-width: 14; fill: none; }
         .connection-line { stroke: var(--text-color); stroke-width: 2; fill: none; }
@@ -166,18 +206,35 @@
 </head>
 <body>
 
-    <div id="toolbar">
-        <h1 id="title-mode">SysML Model</h1>
-        <div id="diagram-context">BDD: System Definition</div>
-        <button id="btn-action-context" class="tool-btn" disabled>Open Internal View (IBD)</button>
-        <button id="btn-undo" class="tool-btn" title="Undo">↶</button>
-        <button id="btn-delete" class="tool-btn" title="Delete">🗑</button>
-        <button id="btn-grow" class="tool-btn" title="Increase Size" disabled>＋</button>
-        <button id="btn-shrink" class="tool-btn" title="Decrease Size" disabled>－</button>
-    </div>
-    
-    <div id="canvas">
-        <svg id="svg-layer"></svg>
+    <div id="app-container">
+        
+        <div id="import-panel">
+            <div class="panel-header">
+                <span>SysML Text Importer</span>
+                <button id="btn-toggle-panel" style="background:transparent; border:none; color:#aaa; cursor:pointer;">◀</button>
+            </div>
+            <textarea id="txt-import-area" placeholder="// Paste your text architectural blocks definition code layout here...&#10;block Controller;&#10;block TelemetryEngine;&#10;block PowerGrid;"></textarea>
+            <div class="panel-footer">
+                <button id="btn-compile" class="primary-btn">Compile & Import into BDD</button>
+            </div>
+        </div>
+
+        <div id="workspace">
+            <div id="toolbar">
+                <button id="btn-open-panel" class="tool-btn" title="Open SysML Script Panel" style="font-size:12px; width:auto; padding:0 8px;">📑 Script</button>
+                <h1 id="title-mode">Modeler</h1>
+                <div id="diagram-context">BDD: System Vocabulary</div>
+                <button id="btn-action-context" class="tool-btn" disabled>Open Internal View (IBD)</button>
+                <button id="btn-undo" class="tool-btn" title="Undo">↶</button>
+                <button id="btn-delete" class="tool-btn" title="Delete">🗑</button>
+                <button id="btn-grow" class="tool-btn" title="Increase Size" disabled>＋</button>
+                <button id="btn-shrink" class="tool-btn" title="Decrease Size" disabled>－</button>
+            </div>
+            
+            <div id="canvas">
+                <svg id="svg-layer"></svg>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -190,28 +247,40 @@
         const btnGrow = document.getElementById('btn-grow');
         const btnShrink = document.getElementById('btn-shrink');
         
+        // Panel Elements
+        const importPanel = document.getElementById('import-panel');
+        const btnTogglePanel = document.getElementById('btn-toggle-panel');
+        const btnOpenPanel = document.getElementById('btn-open-panel');
+        const btnCompile = document.getElementById('btn-compile');
+        const txtImportArea = document.getElementById('txt-import-area');
+
         let selectedType = null; 
         let selectedId = null;
-        
         let isDragging = false;
         let dragTargetId = null;
         let dragStartX, dragStartY;
 
-        // PARALLEL DATA REPOSITORY STRATEGY
-        // The master dictionary holds the BDD root layout and isolated distinct states for any custom IBD contexts.
         let modelState = {
-            currentView: 'BDD', // Tracks if we are at root 'BDD' or inside a block ID (e.g., 'block_0')
+            currentView: 'BDD',
             bdd: { blockCounter: 0, portCounter: 0, connCounter: 0, blocks: {}, ports: {}, connections: {} },
-            ibds: {} // Keyed by block ID, containing independent diagram data maps
+            ibds: {}
         };
 
         const historyStack = [];
         const STORAGE_KEY = 'sysml_parallel_modelling_state';
 
-        // --- Event Orchestration Pipelines ---
+        // Preload default example text matching your architecture output
+        txtImportArea.value = `package SysML_Editor_Architecture {\n    block ParallelModeler;\n    block BlockDefinitionDiagram;\n    block InternalBlockDiagram;\n    block BDD_Block;\n    block IBD_Part;\n    block StructuralPort;\n}`;
+
+        // --- Core Application Handlers ---
         canvas.addEventListener('click', onCanvasClick);
         btnActionCtx.addEventListener('click', handleContextSwitchAction);
         
+        // Panel UI Interactions
+        btnTogglePanel.addEventListener('click', () => importPanel.classList.add('collapsed'));
+        btnOpenPanel.addEventListener('click', () => importPanel.classList.remove('collapsed'));
+        btnCompile.addEventListener('click', compileSysMLText);
+
         document.addEventListener('mousemove', (e) => handleMoveEvent(e.clientX, e.clientY));
         document.addEventListener('touchmove', (e) => {
             if(isDragging) { e.preventDefault(); const t = e.touches[0]; handleMoveEvent(t.clientX, t.clientY); }
@@ -231,17 +300,78 @@
             return modelState.currentView === 'BDD' ? modelState.bdd : modelState.ibds[modelState.currentView];
         }
 
+        // --- SysML Declarative Context Compiler Engine ---
+        function compileSysMLText() {
+            const codeText = txtImportArea.value;
+            // Strict match regex designed to locate 'block [Name]' or 'abstract block [Name]' structures
+            const blockRegex = /(?:abstract\s+)?block\s+([A-Za-z0-9_]+)/g;
+            
+            let match;
+            const extractedNames = [];
+            
+            while ((match = blockRegex.exec(codeText)) !== null) {
+                if (match[1] && !extractedNames.includes(match[1])) {
+                    extractedNames.push(match[1]);
+                }
+            }
+
+            if (extractedNames.length === 0) {
+                alert("No structural block declarations detected. Be sure to use standard language layout format: 'block Name;'");
+                return;
+            }
+
+            checkpoint();
+            
+            // Revert configuration tracking to root context safely before injection
+            modelState.currentView = 'BDD';
+            
+            // Grid-based matrix alignment layout metrics to space out imported blocks
+            let startX = 60;
+            let startY = 60;
+            const horizontalGap = 160;
+            const verticalGap = 110;
+            const maxColumns = Math.floor((canvas.clientWidth - startX) / horizontalGap) || 3;
+
+            extractedNames.forEach((name, index) => {
+                // Check if a block with this exact text name already exists in BDD to avoid duplicates
+                let exists = false;
+                for (let existingId in modelState.bdd.blocks) {
+                    if (modelState.bdd.blocks[existingId].text === name) { exists = true; break; }
+                }
+                if (exists) return; // Skip duplicate definitions safely
+
+                const id = 'node_' + modelState.bdd.blockCounter++;
+                const col = index % maxColumns;
+                const row = Math.floor(index / maxColumns);
+
+                const currentX = startX + (col * horizontalGap);
+                const currentY = startY + (row * verticalGap);
+
+                modelState.bdd.blocks[id] = {
+                    left: currentX + 'px',
+                    top: currentY + 'px',
+                    width: '130px',
+                    height: '80px',
+                    text: name,
+                    ports: []
+                };
+            });
+
+            clearSelection();
+            renderActiveView();
+            saveModel();
+            importPanel.classList.add('collapsed'); // auto-collapse console on compile finish
+        }
+
         function handleContextSwitchAction() {
             checkpoint();
             if (modelState.currentView === 'BDD') {
-                // Dig into the chosen block's internal diagram space
                 const targetBlockId = selectedId;
                 if (!modelState.ibds[targetBlockId]) {
                     modelState.ibds[targetBlockId] = { blockCounter: 0, portCounter: 0, connCounter: 0, blocks: {}, ports: {}, connections: {} };
                 }
                 modelState.currentView = targetBlockId;
             } else {
-                // Ascend cleanly back up to the master vocabulary overview
                 modelState.currentView = 'BDD';
             }
             clearSelection();
@@ -268,7 +398,6 @@
                 btnActionCtx.disabled = false;
             }
 
-            // Restore active working nodes
             for (let bId in active.blocks) {
                 const bData = active.blocks[bId];
                 const block = document.createElement('div');
@@ -314,8 +443,11 @@
                     checkpoint();
                     const active = getActiveLayer();
                     const id = 'node_' + active.blockCounter++;
-                    const x = e.clientX - 65;
-                    const y = (e.clientY - 45) - 40;
+                    
+                    // Adjust click mapping position dynamically relative to bounding rect offset
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left - 65;
+                    const y = e.clientY - rect.top - 40;
 
                     active.blocks[id] = {
                         left: x + 'px', top: y + 'px',
@@ -454,8 +586,9 @@
                 const blockEl = document.getElementById(dragTargetId);
                 const active = getActiveLayer();
                 
-                let currentX = Math.max(0, Math.min(clientX - dragStartX, canvas.clientWidth - blockEl.offsetWidth));
-                let currentY = Math.max(0, Math.min(clientY - dragStartY, canvas.clientHeight - blockEl.offsetHeight));
+                const rect = canvas.getBoundingClientRect();
+                let currentX = Math.max(0, Math.min(clientX - dragStartX, rect.width - blockEl.offsetWidth));
+                let currentY = Math.max(0, Math.min(clientY - dragStartY, rect.height - blockEl.offsetHeight));
 
                 blockEl.style.left = currentX + 'px';
                 blockEl.style.top = currentY + 'px';
@@ -508,7 +641,7 @@
             if (type === 'block') {
                 el.classList.add('selected');
                 btnGrow.disabled = false; btnShrink.disabled = false;
-                if(modelState.currentView === 'BDD') btnActionCtx.disabled = false; // Enable IBD exploration
+                if(modelState.currentView === 'BDD') btnActionCtx.disabled = false;
             }
             if (type === 'port') el.classList.add('selected');
             if (type === 'conn') document.getElementById(id).classList.add('selected');
@@ -548,7 +681,6 @@
             const active = getActiveLayer();
 
             if (selectedType === 'block') {
-                // If deleting a block in BDD, clean up its parallel nested child IBD state completely
                 if (modelState.currentView === 'BDD' && modelState.ibds[selectedId]) {
                     delete modelState.ibds[selectedId];
                 }
