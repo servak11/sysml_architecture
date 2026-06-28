@@ -3,149 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SysML v2 Diamond Composition & Spaced-Port Modeler</title>
-    <style>
-        :root {
-            --bg-color: #1e1e1e;
-            --canvas-bg: #2d2d2d;
-            --border-color: #555;
-            --text-color: #e0e0e0;
-            --accent-def: #007acc;
-            --accent-action: #d06010;
-            --accent-connect: #8a2be2;
-            --selected-color: #ff9900;
-            --port-color: #4caf50;
-            --sidebar-width: 320px;
-        }
-
-        body {
-            margin: 0; padding: 0;
-            background-color: var(--bg-color); color: var(--text-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden; user-select: none; touch-action: none;
-        }
-
-        #app-container { display: flex; width: 100vw; height: 100vh; }
-
-        #import-panel {
-            width: var(--sidebar-width); height: 100%;
-            background-color: #1a1a1a; border-right: 1px solid var(--border-color);
-            display: flex; flex-direction: column; box-sizing: border-box;
-            transition: margin-left 0.3s ease; z-index: 10;
-        }
-        #import-panel.collapsed { margin-left: calc(-1 * var(--sidebar-width)); }
-
-        .panel-header {
-            padding: 12px; background-color: #111; font-size: 11px; font-weight: bold;
-            text-transform: uppercase; letter-spacing: 0.5px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-
-        #txt-import-area {
-            flex: 1; background-color: #252526; color: #a7dbf7;
-            border: none; padding: 12px; font-family: 'Consolas', monospace;
-            font-size: 12px; resize: none; outline: none; line-height: 1.5;
-        }
-
-        .panel-footer { padding: 10px; background-color: #111; border-top: 1px solid var(--border-color); }
-        .primary-btn {
-            width: 100%; background-color: var(--accent-def); color: white;
-            border: none; padding: 8px; border-radius: 4px; font-weight: bold;
-            cursor: pointer; font-size: 11px; text-transform: uppercase;
-        }
-
-        #workspace { flex: 1; display: flex; flex-direction: column; height: 100%; position: relative; }
-
-        #toolbar {
-            height: 50px; background-color: #111; display: flex; align-items: center;
-            padding: 0 15px; border-bottom: 1px solid var(--border-color); gap: 8px; box-sizing: border-box;
-        }
-        #toolbar h1 { font-size: 13px; margin: 0; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
-
-        #diagram-context {
-            font-size: 11px; padding: 5px 10px; border-radius: 3px; font-weight: bold;
-            margin-right: auto; text-transform: uppercase; letter-spacing: 0.5px;
-        }
-
-        .view-switcher-group { display: flex; border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden; margin-right: 15px; }
-        .switch-btn {
-            background-color: #252526; border: none; color: #aaa; padding: 6px 12px;
-            font-size: 11px; font-weight: bold; cursor: pointer; text-transform: uppercase;
-        }
-        .switch-btn.active { color: #fff; }
-        #btn-view-struct.active { background-color: var(--accent-def); }
-        #btn-view-conn.active { background-color: var(--accent-connect); }
-        #btn-view-action.active { background-color: var(--accent-action); }
-
-        .tool-btn {
-            background-color: #2d2d2d; border: 1px solid var(--border-color); color: var(--text-color);
-            width: 34px; height: 34px; border-radius: 4px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; font-weight: bold;
-        }
-        .tool-btn:disabled { opacity: 0.2; cursor: not-allowed; }
-
-        #canvas {
-            flex: 1; background-color: var(--canvas-bg);
-            background-image: linear-gradient(to right, #333 1px, transparent 1px), linear-gradient(to bottom, #333 1px, transparent 1px);
-            background-size: 20px 20px; position: relative; overflow: hidden;
-        }
-
-        .block {
-            position: absolute; background-color: #202020; border: 2px solid #777;
-            color: var(--text-color); box-sizing: border-box; cursor: move;
-            display: flex; flex-direction: column; border-radius: 4px; min-width: 180px; z-index: 2;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4); overflow: visible; /* Changed to visible to let absolute diamonds mount cleanly */
-        }
-        .block.selected { border: 2px dashed var(--selected-color); }
-        
-        .block-header {
-            background-color: #2d2d2d; padding: 6px; text-align: center;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .block-header .stereotype { font-size: 9px; color: #888; font-style: italic; text-transform: uppercase; }
-        .block-header .text { font-size: 13px; font-weight: bold; color: #fff; outline: none; margin-top: 2px; }
-
-        .compartment {
-            background-color: #161616; padding: 6px; font-size: 11px;
-            border-bottom: 1px solid #333; display: flex; flex-direction: column; gap: 4px;
-        }
-        .compartment-title { font-size: 9px; color: #55a0ff; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
-        .compartment-item { color: #ccc; outline: none; padding: 2px 4px; border-radius: 2px; word-break: break-all; }
-
-        /* Unified Port and Structural Composition Diamond Classes */
-        .port {
-            width: 12px; height: 12px; background-color: var(--port-color); position: absolute;
-            border: 1px solid #fff; cursor: pointer; z-index: 10; box-sizing: border-box; border-radius: 2px;
-        }
-        .port.selected { background-color: var(--selected-color); box-shadow: 0 0 8px var(--selected-color); }
-
-        .structural-diamond {
-            width: 12px; height: 12px; background-color: #fff; border: 2px solid #007acc;
-            position: absolute; bottom: -7px; left: calc(50% - 6px);
-            transform: rotate(45deg); cursor: pointer; z-index: 11; box-sizing: border-box;
-        }
-        .structural-diamond.selected { background-color: var(--selected-color); border-color: #fff; }
-
-        #svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
-        .connection-wrapper { cursor: pointer; pointer-events: visibleStroke; }
-        .connection-bg-line { stroke: transparent; stroke-width: 14; fill: none; }
-        .connection-line { stroke: #aaa; stroke-width: 2; fill: none; }
-        .connection-wrapper.selected .connection-line { stroke: var(--selected-color); stroke-dasharray: 4; }
-        
-        .struct-line { stroke: var(--accent-def); stroke-width: 2; marker-end: url(#diamond-marker); }
-        .action-line { stroke: var(--accent-action); stroke-width: 2.5; marker-end: url(#arrow); }
-    </style>
+    <title>SysML v2 Modeler</title>
+    <link rel="stylesheet" href="sysml-styles.css">
 </head>
 <body>
 
     <div id="app-container">
         <div id="import-panel">
             <div class="panel-header">
-                <span>SysML v2 Structural Compiler</span>
+                <span>SysML v2 Script Compiler</span>
                 <button id="btn-toggle-panel" style="background:transparent; border:none; color:#aaa; cursor:pointer;">◀</button>
             </div>
-            <textarea id="txt-import-area" placeholder="Enter part def layers here..."></textarea>
+            <textarea id="txt-import-area"></textarea>
             <div class="panel-footer">
                 <button id="btn-compile" class="primary-btn">Sync to System Canvas</button>
             </div>
@@ -153,21 +22,17 @@
 
         <div id="workspace">
             <div id="toolbar">
-                <button id="btn-open-panel" class="tool-btn" title="Open Script Panel" style="font-size:11px; width:auto; padding:0 8px;">📑 Script</button>
+                <button id="btn-open-panel" class="tool-btn" style="font-size:11px; width:auto; padding:0 8px;">📑 Script</button>
                 <h1>SysML v2</h1>
-                
-                <div id="diagram-context" style="background-color: var(--accent-def);">Structure View: Component Composition</div>
-                
+                <div id="diagram-context">Structure View: Component Composition</div>
                 <div class="view-switcher-group">
-                    <button id="btn-view-struct" class="switch-btn active" title="View/Edit Internal Composition Diamonds">1. Structure</button>
-                    <button id="btn-view-conn" class="switch-btn" title="View/Edit Connectivity Interface Ports">2. Connect</button>
-                    <button id="btn-view-action" class="switch-btn" title="View/Edit Control Behavior Flows">3. Action</button>
+                    <button id="btn-view-struct" class="switch-btn active">1. Structure</button>
+                    <button id="btn-view-conn" class="switch-btn">2. Connect</button>
+                    <button id="btn-view-action" class="switch-btn">3. Action</button>
                 </div>
-
-                <button id="btn-undo" class="tool-btn" title="Undo Action">↶</button>
-                <button id="btn-delete" class="tool-btn" title="Delete Selection">🗑</button>
+                <button id="btn-undo" class="tool-btn" title="Undo" disabled>↶</button>
+                <button id="btn-delete" class="tool-btn" title="Delete" disabled>🗑</button>
             </div>
-            
             <div id="canvas">
                 <svg id="svg-layer">
                     <defs>
@@ -183,431 +48,84 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { modelState, checkpoint, saveModel, loadModel, popHistory, dragInfo } from './sysml-state.js';
+        import { compileV2EngineText, executeSelectionDeletion } from './sysml-actions.js';
+        import { renderActiveView, clearVisualSelection, updateLines, setVisualSelection } from './sysml-renderer.js';
+
         const canvas = document.getElementById('canvas');
-        const svgLayer = document.getElementById('svg-layer');
-        const diagramCtx = document.getElementById('diagram-context');
-        
-        const btnViewStruct = document.getElementById('btn-view-struct');
-        const btnViewConn = document.getElementById('btn-view-conn');
-        const btnViewAction = document.getElementById('btn-view-action');
-        const btnUndo = document.getElementById('btn-undo');
-        const btnDelete = document.getElementById('btn-delete');
-        
-        const importPanel = document.getElementById('import-panel');
-        const btnTogglePanel = document.getElementById('btn-toggle-panel');
-        const btnOpenPanel = document.getElementById('btn-open-panel');
-        const btnCompile = document.getElementById('btn-compile');
         const txtImportArea = document.getElementById('txt-import-area');
-
-        let selectedType = null, selectedId = null;
-        let isDragging = false, dragTargetId = null, dragStartX = 0, dragStartY = 0;
-
-        let modelState = {
-            currentMode: 'STRUCTURE', 
-            definitions: { blockCounter: 0, portCounter: 0, connCounter: 0, blocks: {}, ports: {}, connections: {} }
-        };
-
-        const historyStack = [];
-        const STORAGE_KEY = 'sysml_v2_diamond_view_state';
-
+        
+        // Initial configuration values
         txtImportArea.value = `package MissionControl {\n    part def FlightComputer;\n    part def SensorArray;\n    part def TelemetryUnit;\n}`;
 
-        canvas.addEventListener('click', onCanvasClick);
-        btnTogglePanel.addEventListener('click', () => importPanel.classList.add('collapsed'));
-        btnOpenPanel.addEventListener('click', () => importPanel.classList.remove('collapsed'));
-        btnCompile.addEventListener('click', compileV2EngineText);
-
-        btnViewStruct.addEventListener('click', () => changeMode('STRUCTURE'));
-        btnViewConn.addEventListener('click', () => changeMode('CONNECT'));
-        btnViewAction.addEventListener('click', () => changeMode('ACTION'));
-
-        document.addEventListener('mousemove', (e) => handleMoveEvent(e.clientX, e.clientY));
-        document.addEventListener('mouseup', onPointerEnd);
-        btnDelete.addEventListener('click', deleteSelected);
-        btnUndo.addEventListener('click', popHistory);
-
-        window.addEventListener('DOMContentLoaded', loadModel);
-
-        function changeMode(targetMode) {
+        // View Switching Action Logic
+        function switchViewMode(mode) {
             checkpoint();
-            modelState.currentMode = targetMode;
-            if(targetMode === 'STRUCTURE') {
-                diagramCtx.innerText = `Structure View: Component Composition`;
-                diagramCtx.style.backgroundColor = "var(--accent-def)";
-            } else if (targetMode === 'CONNECT') {
-                diagramCtx.innerText = `Connection View: Dynamic Port Wire Interfaces`;
-                diagramCtx.style.backgroundColor = "var(--accent-connect)";
-            } else if (targetMode === 'ACTION') {
-                diagramCtx.innerText = `Action View: Sequential Execution Control Flows`;
-                diagramCtx.style.backgroundColor = "var(--accent-action)";
-            }
-            clearSelection();
+            modelState.currentMode = mode;
+            clearVisualSelection();
             renderActiveView();
             saveModel();
         }
 
-        function compileV2EngineText() {
-            const codeText = txtImportArea.value;
-            const partDefRegex = /part\s+def\s+([A-Za-z0-9_]+)/g;
-            let match, extractedNames = [];
-            
-            while ((match = partDefRegex.exec(codeText)) !== null) {
-                if (match[1] && !extractedNames.includes(match[1])) extractedNames.push(match[1]);
+        // Initialize UI Event Hook Registers
+        document.getElementById('btn-view-struct').addEventListener('click', () => switchViewMode('STRUCTURE'));
+        document.getElementById('btn-view-conn').addEventListener('click', () => switchViewMode('CONNECT'));
+        document.getElementById('btn-view-action').addEventListener('click', () => switchViewMode('ACTION'));
+        
+        document.getElementById('btn-compile').addEventListener('click', () => {
+            if (compileV2EngineText(txtImportArea.value)) {
+                renderActiveView();
+                document.getElementById('import-panel').classList.add('collapsed');
             }
-            if (extractedNames.length === 0) { alert("No valid definitions discovered."); return; }
+        });
 
-            checkpoint();
-            
-            for (let id in modelState.definitions.blocks) {
-                if (!extractedNames.includes(modelState.definitions.blocks[id].text)) {
-                    delete modelState.definitions.blocks[id];
-                }
-            }
+        document.getElementById('btn-delete').addEventListener('click', () => {
+            if (executeSelectionDeletion()) renderActiveView();
+        });
 
-            let startX = 60, startY = 80, gapX = 220, gapY = 220;
-            const maxCols = Math.floor((canvas.clientWidth - 50) / gapX) || 2;
+        document.getElementById('btn-undo').addEventListener('click', () => {
+            if (popHistory()) renderActiveView();
+        });
 
-            extractedNames.forEach((name, i) => {
-                let existingId = null;
-                for (let id in modelState.definitions.blocks) {
-                    if (modelState.definitions.blocks[id].text === name) { existingId = id; break; }
-                }
+        document.getElementById('btn-toggle-panel').addEventListener('click', () => document.getElementById('import-panel').classList.add('collapsed'));
+        document.getElementById('btn-open-panel').addEventListener('click', () => document.getElementById('import-panel').classList.remove('collapsed'));
 
-                if (!existingId) {
-                    const id = 'def_' + modelState.definitions.blockCounter++;
-                    const col = i % maxCols; const row = Math.floor(i / maxCols);
-                    modelState.definitions.blocks[id] = {
-                        left: (startX + (col * gapX)) + 'px',
-                        top: (startY + (row * gapY)) + 'px',
-                        text: name,
-                        partsCompartment: ['+ sub_module_A'],
-                        actionsCompartment: ['▸ compute_step()'],
-                        ports: []
-                    };
-                }
-            });
-
-            clearSelection();
-            renderActiveView();
-            saveModel();
-            importPanel.classList.add('collapsed');
-        }
-
-        function renderActiveView() {
-            canvas.querySelectorAll('.block').forEach(b => { if (canvas.contains(b)) canvas.removeChild(b); });
-            svgLayer.querySelectorAll('.connection-wrapper').forEach(w => w.remove());
-
-            const active = modelState.definitions;
-
-            for (let bId in active.blocks) {
-                const bData = active.blocks[bId];
-                const block = document.createElement('div');
-                block.className = 'block'; block.id = bId;
-                block.style.left = bData.left; block.style.top = bData.top;
-
-                const header = document.createElement('div');
-                header.className = 'block-header';
-                header.innerHTML = `<div class="stereotype">«part def»</div><div class="text">${bData.text}</div>`;
-                
-                header.addEventListener('mousedown', (e) => onBlockDragStart(e, bId, e.clientX, e.clientY));
-                header.addEventListener('dblclick', (e) => {
-                    e.stopPropagation(); const txtEl = header.querySelector('.text');
-                    txtEl.contentEditable = "true"; txtEl.focus();
-                    txtEl.addEventListener('blur', () => {
-                        checkpoint(); bData.text = txtEl.innerText; txtEl.contentEditable = "false"; saveModel();
-                    }, { once: true });
-                });
-                header.addEventListener('click', (e) => { e.stopPropagation(); setSelection('block', bId); });
-                block.appendChild(header);
-
-                // Structural Parts Compartment
-                const partComp = document.createElement('div');
-                partComp.className = 'compartment';
-                partComp.innerHTML = `<div class="compartment-title">parts usage</div>`;
-                bData.partsCompartment.forEach((item, index) => {
-                    const row = document.createElement('div'); row.className = 'compartment-item'; row.innerText = item;
-                    partComp.appendChild(row);
-                });
-                block.appendChild(partComp);
-
-                // Behavioral Actions Compartment
-                const actionComp = document.createElement('div');
-                actionComp.className = 'compartment';
-                actionComp.innerHTML = `<div class="compartment-title">actions flow</div>`;
-                bData.actionsCompartment.forEach((item, index) => {
-                    const row = document.createElement('div'); row.className = 'compartment-item'; row.innerText = item;
-                    actionComp.appendChild(row);
-                });
-                block.appendChild(actionComp);
-
-                // REUREMENT: Add permanent Base Diamond to every block when in STRUCTURE mode
-                if (modelState.currentMode === 'STRUCTURE') {
-                    const diamondId = 'diamond_' + bId;
-                    const diamond = document.createElement('div');
-                    diamond.className = 'structural-diamond';
-                    diamond.id = diamondId;
-                    if (selectedType === 'diamond' && selectedId === diamondId) diamond.classList.add('selected');
-                    
-                    diamond.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        onDiamondClick(diamondId, bId);
-                    });
-                    block.appendChild(diamond);
-                }
-
-                canvas.appendChild(block);
-
-                // Render matching interfaces for CONNECT & ACTION views
-                if (modelState.currentMode === 'CONNECT' || modelState.currentMode === 'ACTION') {
-                    bData.ports.forEach(pId => {
-                        const pData = active.ports[pId];
-                        if (!pData) return;
-                        const port = document.createElement('div');
-                        port.className = 'port'; port.id = pId;
-                        port.style.left = `calc(${pData.pctX}% - 6px)`;
-                        port.style.top = `calc(${pData.pctY}% - 6px)`;
-                        if (modelState.currentMode === 'ACTION') port.style.backgroundColor = 'var(--accent-action)';
-                        
-                        port.addEventListener('click', (e) => { e.stopPropagation(); onPortClick(pId); });
-                        block.appendChild(port);
-                    });
-                }
-            }
-
-            for (let cId in active.connections) {
-                const conn = active.connections[cId];
-                if (conn.type === modelState.currentMode) {
-                    buildConnectionUI(cId, conn.from, conn.to, conn.type);
-                }
-            }
-            updateLines();
-        }
-
-        function onCanvasClick(e) {
-            if (e.target === canvas || e.target.tagName === 'svg') {
-                if (selectedId) { clearSelection(); return; }
-                checkpoint();
-                const active = modelState.definitions;
-                const id = 'def_' + active.blockCounter++;
+        // Handle Canvas Drag and Translation Events
+        document.addEventListener('mousemove', (e) => {
+            if (dragInfo.isDragging && dragInfo.targetId) {
+                const blockEl = document.getElementById(dragInfo.targetId);
                 const rect = canvas.getBoundingClientRect();
+                let x = Math.max(0, Math.min(e.clientX - dragInfo.startX, rect.width - blockEl.offsetWidth));
+                let y = Math.max(0, Math.min(e.clientY - dragInfo.startY, rect.height - blockEl.offsetHeight));
                 
-                active.blocks[id] = {
-                    left: (e.clientX - rect.left - 90) + 'px', top: (e.clientY - rect.top - 60) + 'px',
-                    text: `Component_${active.blockCounter}`,
-                    partsCompartment: ['+ structural_part'], actionsCompartment: ['▸ action_routine'],
-                    ports: []
-                };
-                renderActiveView();
-                setSelection('block', id);
-                saveModel();
-            }
-        }
-
-        function onBlockDragStart(e, id, clientX, clientY) {
-            if (e.target.contentEditable === "true" || e.target.classList.contains('structural-diamond')) return;
-            
-            const blockEl = document.getElementById(id);
-            const rect = blockEl.getBoundingClientRect();
-            const x = clientX - rect.left; const y = clientY - rect.top;
-            const borderThresh = 15;
-            const active = modelState.definitions;
-
-            // Generate peripheral standard ports in CONNECT/ACTION views
-            if ((x <= borderThresh || x >= rect.width - borderThresh || y <= borderThresh || y >= rect.height - borderThresh) && modelState.currentMode !== 'STRUCTURE') {
-                e.stopPropagation(); e.preventDefault();
-                checkpoint();
-                
-                let pctX = 50, pctY = 50, edge = 'top';
-                const minDist = Math.min(x, rect.width - x, y, rect.height - y);
-
-                if (minDist === x) { pctX = 0; pctY = (y / rect.height) * 100; edge = 'left'; }
-                else if (minDist === (rect.width - x)) { pctX = 100; pctY = (y / rect.height) * 100; edge = 'right'; }
-                else if (minDist === y) { pctX = (x / rect.width) * 100; pctY = 0; edge = 'top'; }
-                else { pctX = (x / rect.width) * 100; pctY = 100; edge = 'bottom'; }
-
-                // REQUIREMENT: Safe Port Anti-Overlap Placement Routine
-                const BUFFER = 20; // Required distance between boundaries
-                bData_ports = active.blocks[id].ports;
-                bData_ports.forEach(existingPortId => {
-                    const ep = active.ports[existingPortId];
-                    if (ep && ep.edge === edge) {
-                        const axisDiff = (edge === 'left' || edge === 'right') ? Math.abs(ep.pctY - pctY) : Math.abs(ep.pctX - pctX);
-                        if (axisDiff < (BUFFER / 2)) {
-                            if (edge === 'left' || edge === 'right') pctY = Math.min(95, pctY + 15);
-                            else pctX = Math.min(95, pctX + 15);
-                        }
-                    }
-                });
-
-                const portId = 'port_' + active.portCounter++;
-                active.ports[portId] = { blockId: id, pctX, pctY, edge };
-                active.blocks[id].ports.push(portId);
-                
-                renderActiveView();
-                setSelection('port', portId);
-                saveModel();
-                return;
-            }
-
-            isDragging = true; dragTargetId = id;
-            dragStartX = clientX - parseInt(blockEl.style.left);
-            dragStartY = clientY - parseInt(blockEl.style.top);
-            setSelection('block', id);
-            e.stopPropagation();
-        }
-
-        // Structural Diamond Link Sequence Manager
-        function onDiamondClick(diamondId, hostBlockId) {
-            const active = modelState.definitions;
-            if (selectedType === 'diamond' && selectedId !== diamondId) {
-                checkpoint();
-                const connId = 'conn_' + active.connCounter++;
-                // Route link connecting parent diamond downward into child target instance
-                active.connections[connId] = { from: selectedId, to: diamondId, type: 'STRUCTURE' };
-                clearSelection();
-                renderActiveView();
-                saveModel();
-            } else {
-                setSelection('diamond', diamondId);
-            }
-        }
-
-        function onPortClick(id) {
-            const active = modelState.definitions;
-            if (selectedType === 'port' && selectedId !== id) {
-                checkpoint();
-                const connId = 'conn_' + active.connCounter++;
-                active.connections[connId] = { from: selectedId, to: id, type: modelState.currentMode };
-                renderActiveView();
-                clearSelection();
-                saveModel();
-            } else {
-                setSelection('port', id);
-            }
-        }
-
-        function buildConnectionUI(id, fromId, toId, type) {
-            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            g.setAttribute('class', 'connection-wrapper'); g.setAttribute('id', id);
-
-            const bgLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            bgLine.setAttribute('class', 'connection-bg-line');
-            
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            if (type === 'STRUCTURE') line.setAttribute('class', 'connection-line struct-line');
-            else if (type === 'ACTION') line.setAttribute('class', 'connection-line action-line');
-            else line.setAttribute('class', 'connection-line');
-
-            g.appendChild(bgLine); g.appendChild(line);
-            svgLayer.appendChild(g);
-            g.addEventListener('click', (e) => { e.stopPropagation(); setSelection('conn', id); });
-        }
-
-        function handleMoveEvent(clientX, clientY) {
-            if (isDragging && dragTargetId) {
-                const blockEl = document.getElementById(dragTargetId);
-                if (!blockEl) return;
-                const rect = canvas.getBoundingClientRect();
-                let x = Math.max(0, Math.min(clientX - dragStartX, rect.width - blockEl.offsetWidth));
-                let y = Math.max(0, Math.min(clientY - dragStartY, rect.height - blockEl.offsetHeight));
-                
-                blockEl.style.left = x + 'px'; blockEl.style.top = y + 'px';
-                modelState.definitions.blocks[dragTargetId].left = blockEl.style.left;
-                modelState.definitions.blocks[dragTargetId].top = blockEl.style.top;
+                blockEl.style.left = x + 'px'; 
+                blockEl.style.top = y + 'px';
+                modelState.definitions.blocks[dragInfo.targetId].left = blockEl.style.left;
+                modelState.definitions.blocks[dragInfo.targetId].top = blockEl.style.top;
                 updateLines();
             }
-        }
+        });
 
-        function updateLines() {
-            const active = modelState.definitions;
-            svgLayer.querySelectorAll('.connection-wrapper').forEach(g => {
-                const conn = active.connections[g.id]; if(!conn) return;
-                
-                const getPos = (id) => {
-                    if (id.startsWith('diamond_')) {
-                        const bId = id.replace('diamond_', '');
-                        const bEl = document.getElementById(bId);
-                        return { x: parseInt(bEl.style.left) + (bEl.offsetWidth / 2), y: parseInt(bEl.style.top) + bEl.offsetHeight, edge: 'bottom' };
-                    } else {
-                        const p = active.ports[id]; const bEl = document.getElementById(p.blockId);
-                        return { x: parseInt(bEl.style.left) + (bEl.offsetWidth * (p.pctX / 100)), y: parseInt(bEl.style.top) + (bEl.offsetHeight * (p.pctY / 100)), edge: p.edge };
-                    }
-                };
-
-                try {
-                    const p1 = getPos(conn.from); const p2 = getPos(conn.to);
-                    const getCtrl = (p) => {
-                        if (p.edge === 'left') return { x: p.x - 40, y: p.y };
-                        if (p.edge === 'right') return { x: p.x + 40, y: p.y };
-                        if (p.edge === 'top') return { x: p.x, y: p.y - 40 };
-                        return { x: p.x, y: p.y + 40 };
-                    };
-                    const d = `M ${p1.x} ${p1.y} C ${getCtrl(p1).x} ${getCtrl(p1).y}, ${getCtrl(p2).x} ${getCtrl(p2).y}, ${p2.x} ${p2.y}`;
-                    g.querySelector('.connection-line').setAttribute('d', d);
-                    g.querySelector('.connection-bg-line').setAttribute('d', d);
-                } catch(e){}
-            });
-        }
-
-        function onPointerEnd() { if (isDragging) { isDragging = false; dragTargetId = null; saveModel(); } }
-
-        function setSelection(type, id) {
-            clearSelection(); selectedType = type; selectedId = id;
-            const el = document.getElementById(id); if (!el) return;
-            if (type === 'block' || type === 'diamond') el.classList.add('selected');
-            if (type === 'port') el.classList.add('selected');
-            if (type === 'conn') document.getElementById(id).classList.add('selected');
-            btnDelete.disabled = false;
-        }
-
-        function clearSelection() {
-            if (selectedType && selectedId) {
-                const el = document.getElementById(selectedId); if (el) el.classList.remove('selected');
-                if (selectedType === 'conn' && document.getElementById(selectedId)) document.getElementById(selectedId).classList.remove('selected');
+        document.addEventListener('mouseup', () => {
+            if (dragInfo.isDragging) {
+                dragInfo.isDragging = false;
+                dragInfo.targetId = null;
+                saveModel();
             }
-            selectedType = null; selectedId = null; btnDelete.disabled = true;
-        }
+        });
 
-        function deleteSelected() {
-            if (!selectedType || !selectedId) return;
-            checkpoint();
-            const active = modelState.definitions;
-
-            if (selectedType === 'block') {
-                active.blocks[selectedId].ports.forEach(pId => {
-                    for(let cId in active.connections) { if(active.connections[cId].from === pId || active.connections[cId].to === pId) delete active.connections[cId]; }
-                    delete active.ports[pId];
-                });
-                for(let cId in active.connections) {
-                    if(active.connections[cId].from === 'diamond_'+selectedId || active.connections[cId].to === 'diamond_'+selectedId) delete active.connections[cId];
-                }
-                delete active.blocks[selectedId];
-            } else if (selectedType === 'port' || selectedType === 'diamond') {
-                for(let cId in active.connections) { if(active.connections[cId].from === selectedId || active.connections[cId].to === selectedId) delete active.connections[cId]; }
-                if (selectedType === 'port') {
-                    const bId = active.ports[selectedId].blockId;
-                    active.blocks[bId].ports = active.blocks[bId].ports.filter(p => p !== selectedId);
-                    delete active.ports[selectedId];
-                }
-            } else if (selectedType === 'conn') {
-                delete active.connections[selectedId];
+        canvas.addEventListener('click', (e) => {
+            if (e.target === canvas || e.target.tagName === 'svg') {
+                clearVisualSelection();
             }
-            clearSelection(); renderActiveView(); saveModel();
-        }
+        });
 
-        function checkpoint() { historyStack.push(JSON.parse(JSON.stringify(modelState))); btnUndo.disabled = false; }
-        function saveModel() { localStorage.setItem(STORAGE_KEY, JSON.stringify(modelState)); }
-        function loadModel() {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (raw) { modelState = JSON.parse(raw); renderActiveView(); }
-        }
-        function popHistory() {
-            if (historyStack.length === 0) return;
-            modelState = historyStack.pop();
-            renderActiveView(); saveModel();
-            if (historyStack.length === 0) btnUndo.disabled = true;
-        }
+        // Initialize System Model Layer Application
+        window.addEventListener('DOMContentLoaded', () => {
+            loadModel();
+            renderActiveView();
+        });
     </script>
 </body>
 </html>

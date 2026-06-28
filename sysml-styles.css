@@ -1,0 +1,134 @@
+/**
+ * SysML v2 Parallel Modeler Layout Stylesheet
+ * Handles core themes, layout metrics, nested block design, and custom markers.
+ */
+
+:root {
+    --bg-color: #1e1e1e;
+    --canvas-bg: #2d2d2d;
+    --border-color: #555;
+    --text-color: #e0e0e0;
+    --accent-def: #007acc;
+    --accent-action: #d06010;
+    --accent-connect: #8a2be2;
+    --selected-color: #ff9900;
+    --port-color: #4caf50;
+    --sidebar-width: 320px;
+}
+
+body {
+    margin: 0; padding: 0;
+    background-color: var(--bg-color); color: var(--text-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden; user-select: none; touch-action: none;
+}
+
+#app-container { display: flex; width: 100vw; height: 100vh; }
+
+#import-panel {
+    width: var(--sidebar-width); height: 100%;
+    background-color: #1a1a1a; border-right: 1px solid var(--border-color);
+    display: flex; flex-direction: column; box-sizing: border-box;
+    transition: margin-left 0.3s ease; z-index: 10;
+}
+#import-panel.collapsed { margin-left: calc(-1 * var(--sidebar-width)); }
+
+.panel-header {
+    padding: 12px; background-color: #111; font-size: 11px; font-weight: bold;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex; justify-content: space-between; align-items: center;
+}
+
+#txt-import-area {
+    flex: 1; background-color: #252526; color: #a7dbf7;
+    border: none; padding: 12px; font-family: 'Consolas', monospace;
+    font-size: 12px; resize: none; outline: none; line-height: 1.5;
+}
+
+.panel-footer { padding: 10px; background-color: #111; border-top: 1px solid var(--border-color); }
+.primary-btn {
+    width: 100%; background-color: var(--accent-def); color: white;
+    border: none; padding: 8px; border-radius: 4px; font-weight: bold;
+    cursor: pointer; font-size: 11px; text-transform: uppercase;
+}
+
+#workspace { flex: 1; display: flex; flex-direction: column; height: 100%; position: relative; }
+
+#toolbar {
+    height: 50px; background-color: #111; display: flex; align-items: center;
+    padding: 0 15px; border-bottom: 1px solid var(--border-color); gap: 8px; box-sizing: border-box;
+}
+#toolbar h1 { font-size: 13px; margin: 0; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
+
+#diagram-context {
+    font-size: 11px; padding: 5px 10px; border-radius: 3px; font-weight: bold;
+    margin-right: auto; text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.view-switcher-group { display: flex; border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden; margin-right: 15px; }
+.switch-btn {
+    background-color: #252526; border: none; color: #aaa; padding: 6px 12px;
+    font-size: 11px; font-weight: bold; cursor: pointer; text-transform: uppercase;
+}
+.switch-btn.active { color: #fff; }
+#btn-view-struct.active { background-color: var(--accent-def); }
+#btn-view-conn.active { background-color: var(--accent-connect); }
+#btn-view-action.active { background-color: var(--accent-action); }
+
+.tool-btn {
+    background-color: #2d2d2d; border: 1px solid var(--border-color); color: var(--text-color);
+    width: 34px; height: 34px; border-radius: 4px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-weight: bold;
+}
+.tool-btn:disabled { opacity: 0.2; cursor: not-allowed; }
+
+#canvas {
+    flex: 1; background-color: var(--canvas-bg);
+    background-image: linear-gradient(to right, #333 1px, transparent 1px), linear-gradient(to bottom, #333 1px, transparent 1px);
+    background-size: 20px 20px; position: relative; overflow: hidden;
+}
+
+.block {
+    position: absolute; background-color: #202020; border: 2px solid #777;
+    color: var(--text-color); box-sizing: border-box; cursor: move;
+    display: flex; flex-direction: column; border-radius: 4px; min-width: 180px; z-index: 2;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4); overflow: visible;
+}
+.block.selected { border: 2px dashed var(--selected-color); }
+
+.block-header {
+    background-color: #2d2d2d; padding: 6px; text-align: center;
+    border-bottom: 1px solid var(--border-color);
+}
+.block-header .stereotype { font-size: 9px; color: #888; font-style: italic; text-transform: uppercase; }
+.block-header .text { font-size: 13px; font-weight: bold; color: #fff; outline: none; margin-top: 2px; }
+
+.compartment {
+    background-color: #161616; padding: 6px; font-size: 11px;
+    border-bottom: 1px solid #333; display: flex; flex-direction: column; gap: 4px;
+}
+.compartment-title { font-size: 9px; color: #55a0ff; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+.compartment-item { color: #ccc; outline: none; padding: 2px 4px; border-radius: 2px; word-break: break-all; }
+
+.port {
+    width: 12px; height: 12px; background-color: var(--port-color); position: absolute;
+    border: 1px solid #fff; cursor: pointer; z-index: 10; box-sizing: border-box; border-radius: 2px;
+}
+.port.selected { background-color: var(--selected-color); box-shadow: 0 0 8px var(--selected-color); }
+
+.structural-diamond {
+    width: 12px; height: 12px; background-color: #fff; border: 2px solid #007acc;
+    position: absolute; bottom: -7px; left: calc(50% - 6px);
+    transform: rotate(45deg); cursor: pointer; z-index: 11; box-sizing: border-box;
+}
+.structural-diamond.selected { background-color: var(--selected-color); border-color: #fff; }
+
+#svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+.connection-wrapper { cursor: pointer; pointer-events: visibleStroke; }
+.connection-bg-line { stroke: transparent; stroke-width: 14; fill: none; }
+.connection-line { stroke: #aaa; stroke-width: 2; fill: none; }
+.connection-wrapper.selected .connection-line { stroke: var(--selected-color); stroke-dasharray: 4; }
+
+.struct-line { stroke: var(--accent-def); stroke-width: 2; marker-end: url(#diamond-marker); }
+.action-line { stroke: var(--accent-action); stroke-width: 2.5; marker-end: url(#arrow); }
