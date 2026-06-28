@@ -1,121 +1,163 @@
-
-# Technical Specification: SysML Block Definition Diagram (BDD) Web Editor
-
-complete, self-contained functional specification for your SysML Block Definition Diagram (BDD) editor
-
-copy and paste this markdown block directly into a new Gemini prompt window to instantly re-establish this development baseline
-
-## 1. System Overview & Objective
-
-The objective is to implement a single-file, production-ready SysML Block Definition Diagram (BDD) visual editor written exclusively in HTML5, CSS3, and vanilla JavaScript. The application runs entirely client-side, adopts a modern Dark Mode aesthetic, fits its work environment dynamically to the viewport window, and acts as a stateful diagraming tool without external dependencies.
+This functional specification acts as a complete "blueprint."
+You can copy and paste this entire markdown document into a fresh Gemini chat window.
+(or any other LLM) to instantly recreate the exact features, rules, and UI layout we have developed.
 
 ---
 
-## 2. Global UI Framework & Styling
+# Functional Specification: System Engineering (SysML) Parallel BDD/IBD Modeling Tool
 
-### 2.1 Color Palette (Dark Theme CSS Variables)
+## 1. Vision & Architecture Overview
 
-* `--bg-color`: `#1e1e1e` (App framing context)
-* `--canvas-bg`: `#2d2d2d` (Grid workspace backplane)
-* `--border-color`: `#555` (Subtle frame structural split lines)
-* `--text-color`: `#e0e0e0` (High contrast labels and geometry boundaries)
-* `--accent-color`: `#007acc` (Interactive UI highlights)
-* `--selected-color`: `#ff9900` (Focused attention indicator for blocks, lines, ports)
-* `--danger-color`: `#ff3333` (Destructive action hover highlights)
-* `--port-color`: `#4caf50` (Standard SysML flow port color)
+The objective is to create a lightweight, responsive, single-file HTML5/JavaScript systems engineering diagramming editor. The tool models system architectures using two fundamental, parallel SysML (Systems Modeling Language) views:
 
-### 2.2 Layout Composition
+1. **Block Definition Diagram (BDD):** The master vocabulary dictionary defining core types (`«block»`).
+2. **Internal Block Diagram (IBD):** The internal assembly view of a specific selected block, displaying its structural instances (`«part»`) and how they interface.
 
-* **Fixed Icon Toolbar:** Positioned at the top (`height: 45px`, background `#111`). Contains a textless layout icon shortcut panel including:
-* `↶` Undo (Disabled state variable)
-* `🗑` Delete Selected (Disabled when nothing is focused)
-* `＋` Scale Up Element (Disabled unless a Block element is selected)
-* `－` Scale Down Element (Disabled unless a Block element is selected)
+### Parallel Data Repository Model
 
-
-* **Canvas Vector Viewport:** Takes up the remaining vertical room (`height: calc(100vh - 45px)`). It features an infinite grid pattern via dual overlaying CSS `linear-gradient` declarations sized precisely at `20px 20px`. Scrolling bounds are locked via `overflow: hidden` to enable pan/drag coordination.
+Rather than a simple visual toggle, the application must maintain isolated parallel state data layers. Elements inside a block's child IBD exist independently from the top-level master BDD canvas, allowing hierarchical engineering design traversal.
 
 ---
 
-## 3. Element Definitions & Architecture
+## 2. Technical Stack & UI Design Requirements
 
-### 3.1 SysML Structural Blocks (`.block`)
-
-* Rendered as an absolute-positioned DOM container (`z-index: 2`).
-* Default geometric footprint initialized at `130px` width by `80px` height.
-* Borders are configured at `2px solid var(--text-color)`. When targeted by selection flags, the style switches to `2px dashed var(--selected-color)`.
-* **Inner Layout:** Displays a fixed text block string `«block»` in italics at the top center (`font-size: 10px`). Directly below is an editable title section element wrapper (`.text`, `font-size: 13px`, bold).
-
-### 3.2 System Flow Ports (`.port`)
-
-* Represented as explicit square layout indicators (`12px` by `12px`) embedded seamlessly on the bounding frame of their parent container.
-* Styled with standard `var(--port-color)` values and masked with a `1px solid #fff` ring overlay.
-* Z-index is locked at `10` to ensure interaction handlers intercept mouse events ahead of block drag surfaces.
-
-### 3.3 Relational Connections
-
-* Managed globally within a single flat vector overlay element layer (`<svg id="svg-layer">`).
-* Connections use an advanced double-path composition inside a grouping block (`<g class="connection-wrapper">`):
-1. An invisible underlying path tracking mask (`stroke-width: 12`, `fill: none`) to easily capture mouse click triggers.
-2. An explicit visual connector lane (`stroke-width: 2`, `fill: none`) colored by default via `var(--text-color)`. Shifting to a highlighted selected layout converts this into a broken dash profile (`stroke-dasharray: 4`) mapped to `var(--selected-color)`.
+* **Delivery Format:** A single, self-contained, valid HTML5 file combining structure, CSS styling, and JavaScript logic.
+* **Styling Theme:** High-contrast Dark Mode.
+* `Backgrounds:` Deep Charcoal (`#1e1e1e`), canvas workspaces (`#2d2d2d`) featuring a clean $20\text{px}\times20\text{px}$ alignment grid.
+* `Elements:` Dark Slate (`#252526`) with crisp off-white borders (`#e0e0e0`).
+* `Accents:` BDD context tags in Standard Blue (`#007acc`), IBD context tags in Amethyst Violet (`#8a2be2`), active selections highlighted in Vibrant Amber (`#ff9900`), and connection ports rendered in Forest Green (`#4caf50`).
 
 
+* **Viewport Adaptability:** Responsive flex layout prioritizing desktop mouse tracking and unified layout protection for mobile/tablet touchscreen gestures. `touch-action: none` must be declared globally to suppress default device scrolling or pinching while dragging objects.
 
 ---
 
-## 4. Interaction Engine Rules & Finite State Machine
+## 3. Component Interaction & Input Rules
 
-The interface must track user interaction exactly through the following input state logic patterns:
+### A. Element Selection Lifecycle
+
+* **Rule:** **First Click/Tap Selects; Second Click/Tap Edits.**
+* Clicking a passive block or part strictly sets its selection state (applying a dashed Amber border and enabling toolbar utility scaling updates).
+* Inline text alteration is locked on the initial selection event. Only when an already-selected element receives its secondary click event does the inner string layer dynamically toggle `contentEditable="true"`, shift pointer events to catch cursor focus, and cleanly select its entire text body for rewriting. On text component `blur`, focus parameters normalize.
+
+### B. Proximity-Based Port Safety Logic
+
+* Mousedown/Touchstart events directed exactly over the peripheral boundary (outer $12\text{px}$ frame) of an active block generate a structural Port interface.
+* **Overlap Validation Rule:** Prior to initializing a new port object, the engine must run a geometric distance calculation (radius check threshold set to **16 pixels**) relative to all pre-existing ports bound to that element. If a click falls inside this overlap range, the creation of a new port is aborted; the system instead routes the click as a **Port Selection / Connector Routing** action on the existing port.
+
+### C. Touch Screen Responsiveness
+
+* All component interactions (dragging blocks, border-tapping to generate ports, and line selections) must be explicitly polyfilled with touch event alternatives (`touchstart`, `touchmove`, `touchend`).
+* Viewport panning must be intercepted and suppressed during active drag operations to prevent element stuttering or unexpected text selection jumps on mobile interfaces.
+
+---
+
+## 4. Routing Engine Specification
+
+* Connections utilize an SVG overlay rendering layer.
+* Connections must map port to port using smooth Cubic Bézier paths ($C$ commands).
+* Path calculation determines control vector directionality based on the exact boundary edge location (`left`, `right`, `top`, `bottom`) of the host port, applying an automatic $45\text{px}$ orthogonal protrusion offset before plotting curves to avoid path clipping across block bodies.
+* To facilitate reliable mobile tapping on fine 2px links, every visible line must be wrapped within a wider, transparent SVG hit-box overlay (`stroke-width: 14px`) optimized to pass interactive pointer-events seamlessly.
+
+---
+
+## 5. Storage, History, & Schema Definition
+
+The application tracks data mutations by capturing state snapshots into a deep-cloned JSON model committed automatically to browser `localStorage` on any creation, relocation, deletion, or text adjustment.
+
+### Underlying JSON Storage Schema
+
+```json
+{
+  "currentView": "BDD", 
+  "bdd": {
+    "blockCounter": 1,
+    "portCounter": 1,
+    "connCounter": 0,
+    "blocks": {
+      "node_0": { "left": "150px", "top": "120px", "width": "130px", "height": "80px", "text": "PowerSupply", "ports": ["port_0"] }
+    },
+    "ports": {
+      "port_0": { "blockId": "node_0", "pctX": 100, "pctY": 50, "edge": "right" }
+    },
+    "connections": {}
+  },
+  "ibds": {
+    "node_0": {
+      "blockCounter": 2,
+      "portCounter": 2,
+      "connCounter": 1,
+      "blocks": {
+        "node_0": { "left": "50px", "top": "80px", "width": "110px", "height": "70px", "text": "Transformer", "ports": ["port_1"] }
+      },
+      "ports": {
+        "port_1": { "blockId": "node_0", "pctX": 100, "pctY": 50, "edge": "right" }
+      },
+      "connections": {}
+    }
+  }
+}
 
 ```
-[ Canvas Surface Click ] ➔ Instantiates new Block centered on cursor (offset top by 45px)
-[ Canvas Selection Clear ] ➔ Clicking raw background drops all current active selections
-
-```
-
-### 4.1 Strict Two-Stage Block Editing Protocol
-
-1. **Stage 1 (First Click / MouseDown):** Activates a standard element transformation handle. Sets focus selection style to active (`.selected`). Pressing and moving the cursor tracks block transposition coordinates, dynamically shifting element `.style.left` and `.style.top`. Boundaries are clamped to prevent dragging elements off-canvas.
-2. **Stage 2 (Second Click on an Already Selected Block):** Temporarily toggles text container mechanics (`pointer-events: auto`, `contentEditable: true`), programmatic element focus, and triggers a full string auto-selection selection command (`document.execCommand('selectAll')`). On an explicit `blur` event, the runtime checks if modifications occurred, updates database state tables, and reverts the element back to native protected view locks.
-
-### 4.2 Proximity-Aware Border Interception (Port Handling)
-
-* Clicking near block boundaries requires complex intersection detection. A margin boundary zone threshold is configured at exactly `10px`.
-* When a `mousedown` registers inside this border zone, the system calculates the absolute distances to all existing port objects assigned to that specific block.
-* **Decision Matrix:**
-* **Port Select Mode:** If the click event lands within a proximity circle radius of **14 pixels** relative to any pre-existing port center point, **do not create a port**. Instead, immediately redirect execution to select that port, or complete an active connection sequence.
-* **Port Create Mode:** If the zone click falls outside the 14-pixel safety window, instantiate a new port. Mathematically determine the nearest structural face edge (`left`, `right`, `top`, or `bottom`), bind its relative attachment vector position using CSS percentage values, and automatically apply center compensation tracking logic (`calc(pct% - 6px)`).
-
-
-
-### 4.3 Connection Vector Flow Mapping
-
-* Clicking a single port flags it as the current sequence origin.
-* Clicking an alternative, secondary target port draws a new relation line, wiping active selection buffers clean.
-* Lines are drawn dynamically using explicit cubic Bezier vector definitions (`M x1 y1 C cx1 cy1, cx2 cy2, x2 y2`). Control vectors project outwards by a constant normal distance offset of `45px` based on the designated target anchor face edge parameters (`left`, `right`, `top`, `bottom`) to create polished, curved orthogonal schematics.
-
-### 4.4 Toolbar Geometry Modifiers
-
-* Selecting an active block unlocks the custom scale toolbar button pathways (`＋` and `－`).
-* Clicking `＋` increments element size by `+20px` width and `+15px` height.
-* Clicking `－` decrements element size by `-20px` width and `-15px` height (enforcing safe design bounds of `90px` width and `60px` height minimums).
-* Any resize operation forces an immediate visual update to all connected vector lines.
 
 ---
 
-## 5. Persistence & State Change Engineering
+## 6. Prompting Instructions to Recreate the Tool
 
-### 5.1 Local Storage State Engine (`localStorage`)
+If you want to spin up this application in a new chat session, use the following execution prompt:
 
-The application operates as a state-preserving platform across page refreshes. Every element change must automatically sync to browser cache memory:
+> **Prompt for Initialization:**
+> Please generate a single-file dark-mode SysML modeling application supporting parallel BDD and IBD environments adhering exactly to the provided Functional Specification. Ensure that the core state repository cleanly isolates the BDD definition tree from nested IBD assemblies. Embed the strict two-click selection-to-edit logic for nodes, apply the 16px port collision avoidance test on the borders, and build the custom SVG Cubic Bézier line routing logic. Deliver full desktop pointer tracking alongside mobile touch gesture polyfills. All configurations must be packed inside one block of clean, production-ready, un-truncated HTML5 code.
 
-* **Storage Target Key:** `sysml_bdd_diagram_state`
-* **Payload Profile:** A complete structural JSON object parsing configuration values for tracking primary auto-increment indices (`blockCounter`, `portCounter`, `connCounter`), detailed positional information objects (`blocks`), individual node connections (`ports`), and relationship path records (`connections`).
-* **Instantiation Protocol:** During the initialization window lifecycle event (`DOMContentLoaded`), the engine automatically queries storage keys. If a valid configuration payload string exists, the editor reads the schema, clears default DOM parameters, loops through tracking keys, and rebuilds the interactive diagram view.
 
-### 5.2 Transaction History Snapshot Architecture (Undo)
+Here is the new functional specification chapter, formatted to integrate seamlessly into your existing blueprint document. It details the text parser, the grid alignment mechanics, and the interface requirements for the compilation engine.
 
-* The application tracks changes via an internal state stack array array (`historyStack`).
-* Before any mutation occurs (including block placement, connection routing, label revisions, resizing, or deletion passes), a snapshot of the serialized database state is deep-cloned and appended to the history array stack.
-* Clicking the `↶ Undo` interface button pops the top snapshot state payload back into memory, rebuilds the workspace layout cleanly, and saves the updated layout to `localStorage`. If the history tracking array stack empties out entirely, the interface explicitly locks out button interaction states.
+---
 
+## 7. Subsystem: Declarative SysML Script Compiling & Import Engine
+
+### 7.1 Objective & Structural Scope
+
+To allow seamless interoperability between textual modeling and the graphical canvas, the application includes a localized text compilation engine. This engine parses declarative SysML architecture code blocks, isolates system structures, and dynamically populates them as visual elements onto the master Block Definition Diagram (BDD) canvas without requiring page refreshes or external API dependencies.
+
+---
+
+### 7.2 Syntax Parsing Specifications
+
+The compiler runs a non-destructive regular expression scanning routine over raw text inputs. It relies on a deterministic structural pattern to safely identify block elements while ignoring decorative language annotations like packages, comments, or attributes.
+
+* **Target Compilation Pattern:** ```javascript
+/(?:abstract\s+)?block\s+([A-Za-z0-9_]+)/g
+```
+
+```
+
+
+* **Execution Logic:**
+1. The engine reads the incoming string buffer line-by-line.
+2. It matches instances of the keywords `block` or `abstract block` followed by a valid alpha-numeric identifier.
+3. The matched identifier string is extracted as the canonical `text` property of the new node.
+4. **Deduplication Constraint:** The compiler queries the active database arrays before spawning a node. If an element with the exact string name already exists on the canvas, the creation sequence for that specific block is safely bypassed to protect existing diagram modifications.
+
+
+
+---
+
+### 7.3 Smart Grid Matrix Spawning Layout
+
+To prevent elements from stacking on top of each other when imported simultaneously, the engine automatically passes all newly compiled blocks through an algorithmic matrix layout routine. This organizes the structures into a clean grid on the Cartesian space of the BDD canvas.
+
+| Layout Parameter | Engineering Metric | Purpose |
+| --- | --- | --- |
+| **Initial Origin Offset** | $X = 60\text{px}, Y = 60\text{px}$ | Prevents edge clipping against boundaries or toolbars. |
+| **Horizontal Node Gap** | $160\text{px}$ | Ensures adequate space for side-mounted `StructuralPorts`. |
+| **Vertical Node Gap** | $110\text{px}$ | Leaves clear vertical lanes for routing Cubic Bézier paths. |
+| **Maximum Matrix Columns** | $\lfloor(\text{Canvas Width} - 60) / 160\rfloor$ | Dynamically adjusts grid column wrapping based on screen size. |
+
+---
+
+### 7.4 UI Layout & State Rules
+
+* **The Script Console Panel:** A collapsible sidebar tracking the left margin (`width: 320px`). It features a toggle action to minimize or slide out of view, ensuring it never obstructs spatial diagram workflows.
+* **Context Reset Invariance:** Activating the **"Compile & Import"** pipeline automatically updates the system state back to `modelState.currentView = 'BDD'`. This prevents users from accidentally loading high-level system vocabulary types directly inside a child Internal Block Diagram (IBD) part workspace.
+* **Transactional History Baseline:** Before any imported blocks are rendered on the canvas, the engine calls a deep-copy snapshot function (`checkpoint()`). This backs up the current model array, allowing the entire import action to be completely reversed via the standard canvas **Undo (↶)** operation.

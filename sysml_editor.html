@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SysML Parallel BDD/IBD Modeler & Importer</title>
+    <title>SysML v2 Parallel Definition & Usage Modeler</title>
     <style>
         :root {
             --bg-color: #1e1e1e;
             --canvas-bg: #2d2d2d;
             --border-color: #555;
             --text-color: #e0e0e0;
-            --accent-bdd: #007acc;
-            --accent-ibd: #8a2be2;
+            --accent-def: #007acc;
+            --accent-usage: #8a2be2;
             --selected-color: #ff9900;
             --danger-color: #ff3333;
             --port-color: #4caf50;
@@ -35,7 +35,6 @@
             height: 100vh;
         }
 
-        /* SysML Text Import Panel Styling */
         #import-panel {
             width: var(--sidebar-width);
             height: 100%;
@@ -55,7 +54,7 @@
         .panel-header {
             padding: 12px;
             background-color: #111;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -86,7 +85,7 @@
 
         .primary-btn {
             width: 100%;
-            background-color: var(--accent-bdd);
+            background-color: var(--accent-def);
             color: white;
             border: none;
             padding: 8px;
@@ -98,7 +97,6 @@
 
         .primary-btn:hover { background-color: #0062a3; }
 
-        /* Main Workspace Layout */
         #workspace {
             flex: 1;
             display: flex;
@@ -119,14 +117,15 @@
         }
 
         #toolbar h1 {
-            font-size: 14px;
+            font-size: 13px;
             margin: 0;
             font-weight: 600;
             color: #aaa;
+            text-transform: uppercase;
         }
 
         #diagram-context {
-            background-color: var(--accent-bdd);
+            background-color: var(--accent-def);
             color: #fff;
             font-size: 11px;
             padding: 4px 8px;
@@ -207,28 +206,27 @@
 <body>
 
     <div id="app-container">
-        
         <div id="import-panel">
             <div class="panel-header">
-                <span>SysML Text Importer</span>
+                <span>SysML v2 Script Panel</span>
                 <button id="btn-toggle-panel" style="background:transparent; border:none; color:#aaa; cursor:pointer;">◀</button>
             </div>
-            <textarea id="txt-import-area" placeholder="// Paste your text architectural blocks definition code layout here...&#10;block Controller;&#10;block TelemetryEngine;&#10;block PowerGrid;"></textarea>
+            <textarea id="txt-import-area" placeholder="// Paste SysML v2 definitions here...&#10;part def FlightController;&#10;part def SensorCluster;&#10;part def PowerSubsystem;"></textarea>
             <div class="panel-footer">
-                <button id="btn-compile" class="primary-btn">Compile & Import into BDD</button>
+                <button id="btn-compile" class="primary-btn">Compile to DefinitionView</button>
             </div>
         </div>
 
         <div id="workspace">
             <div id="toolbar">
-                <button id="btn-open-panel" class="tool-btn" title="Open SysML Script Panel" style="font-size:12px; width:auto; padding:0 8px;">📑 Script</button>
-                <h1 id="title-mode">Modeler</h1>
-                <div id="diagram-context">BDD: System Vocabulary</div>
-                <button id="btn-action-context" class="tool-btn" disabled>Open Internal View (IBD)</button>
-                <button id="btn-undo" class="tool-btn" title="Undo">↶</button>
-                <button id="btn-delete" class="tool-btn" title="Delete">🗑</button>
-                <button id="btn-grow" class="tool-btn" title="Increase Size" disabled>＋</button>
-                <button id="btn-shrink" class="tool-btn" title="Decrease Size" disabled>－</button>
+                <button id="btn-open-panel" class="tool-btn" title="Open SysML v2 Script Editor" style="font-size:12px; width:auto; padding:0 8px;">📑 Script v2</button>
+                <h1>SysML v2</h1>
+                <div id="diagram-context">DefinitionView: Reusable Blueprints</div>
+                <button id="btn-action-context" class="tool-btn" disabled>Open Usage View (part)</button>
+                <button id="btn-undo" class="tool-btn" title="Undo Layout Action">↶</button>
+                <button id="btn-delete" class="tool-btn" title="Delete Selection">🗑</button>
+                <button id="btn-grow" class="tool-btn" title="Scale Up Node" disabled>＋</button>
+                <button id="btn-shrink" class="tool-btn" title="Scale Down Node" disabled>－</button>
             </div>
             
             <div id="canvas">
@@ -247,7 +245,6 @@
         const btnGrow = document.getElementById('btn-grow');
         const btnShrink = document.getElementById('btn-shrink');
         
-        // Panel Elements
         const importPanel = document.getElementById('import-panel');
         const btnTogglePanel = document.getElementById('btn-toggle-panel');
         const btnOpenPanel = document.getElementById('btn-open-panel');
@@ -261,25 +258,22 @@
         let dragStartX, dragStartY;
 
         let modelState = {
-            currentView: 'BDD',
-            bdd: { blockCounter: 0, portCounter: 0, connCounter: 0, blocks: {}, ports: {}, connections: {} },
-            ibds: {}
+            currentView: 'DefinitionView', 
+            definitions: { blockCounter: 0, portCounter: 0, connCounter: 0, blocks: {}, ports: {}, connections: {} },
+            usages: {} 
         };
 
         const historyStack = [];
-        const STORAGE_KEY = 'sysml_parallel_modelling_state';
+        const STORAGE_KEY = 'sysml_v2_parallel_modelling_state';
 
-        // Preload default example text matching your architecture output
-        txtImportArea.value = `package SysML_Editor_Architecture {\n    block ParallelModeler;\n    block BlockDefinitionDiagram;\n    block InternalBlockDiagram;\n    block BDD_Block;\n    block IBD_Part;\n    block StructuralPort;\n}`;
+        txtImportArea.value = `package CoreSystemArchitecture {\n    part def GroundControlStation;\n    part def UnmannedAerialVehicle;\n    part def NavigationArray;\n    part def PropulsionAssembly;\n}`;
 
-        // --- Core Application Handlers ---
         canvas.addEventListener('click', onCanvasClick);
         btnActionCtx.addEventListener('click', handleContextSwitchAction);
         
-        // Panel UI Interactions
         btnTogglePanel.addEventListener('click', () => importPanel.classList.add('collapsed'));
         btnOpenPanel.addEventListener('click', () => importPanel.classList.remove('collapsed'));
-        btnCompile.addEventListener('click', compileSysMLText);
+        btnCompile.addEventListener('click', compileSysMLV2Text);
 
         document.addEventListener('mousemove', (e) => handleMoveEvent(e.clientX, e.clientY));
         document.addEventListener('touchmove', (e) => {
@@ -297,104 +291,123 @@
         window.addEventListener('DOMContentLoaded', loadModel);
 
         function getActiveLayer() {
-            return modelState.currentView === 'BDD' ? modelState.bdd : modelState.ibds[modelState.currentView];
+            return modelState.currentView === 'DefinitionView' ? modelState.definitions : modelState.usages[modelState.currentView];
         }
 
-        // --- SysML Declarative Context Compiler Engine ---
-        function compileSysMLText() {
+        // --- FIXED: Smart Sync Script Parser Engine ---
+        function compileSysMLV2Text() {
             const codeText = txtImportArea.value;
-            // Strict match regex designed to locate 'block [Name]' or 'abstract block [Name]' structures
-            const blockRegex = /(?:abstract\s+)?block\s+([A-Za-z0-9_]+)/g;
+            const partDefRegex = /part\s+def\s+([A-Za-z0-9_]+)/g;
             
             let match;
             const extractedNames = [];
             
-            while ((match = blockRegex.exec(codeText)) !== null) {
+            while ((match = partDefRegex.exec(codeText)) !== null) {
                 if (match[1] && !extractedNames.includes(match[1])) {
                     extractedNames.push(match[1]);
                 }
             }
 
             if (extractedNames.length === 0) {
-                alert("No structural block declarations detected. Be sure to use standard language layout format: 'block Name;'");
+                alert("No SysML v2 definitions detected. Declare architectural templates using standard syntax: 'part def Name;'");
                 return;
             }
 
             checkpoint();
-            
-            // Revert configuration tracking to root context safely before injection
-            modelState.currentView = 'BDD';
-            
-            // Grid-based matrix alignment layout metrics to space out imported blocks
-            let startX = 60;
-            let startY = 60;
-            const horizontalGap = 160;
-            const verticalGap = 110;
+            modelState.currentView = 'DefinitionView';
+
+            // 1. Prune existing canvas items missing from the new code text
+            for (let existingId in modelState.definitions.blocks) {
+                const blockName = modelState.definitions.blocks[existingId].text;
+                if (!extractedNames.includes(blockName)) {
+                    // Purge internal deep mapping states for this definition
+                    if (modelState.usages[existingId]) delete modelState.usages[existingId];
+                    
+                    // Clear structural connections attached to ports of this block
+                    const portsToClean = [...modelState.definitions.blocks[existingId].ports];
+                    portsToClean.forEach(pId => {
+                        for (let cId in modelState.definitions.connections) {
+                            if (modelState.definitions.connections[cId].from === pId || modelState.definitions.connections[cId].to === pId) {
+                                delete modelState.definitions.connections[cId];
+                            }
+                        }
+                        delete modelState.definitions.ports[pId];
+                    });
+                    delete modelState.definitions.blocks[existingId];
+                }
+            }
+
+            // 2. Add elements while keeping position of already existing items intact
+            let startX = 60; let startY = 60;
+            const horizontalGap = 160; const verticalGap = 110;
             const maxColumns = Math.floor((canvas.clientWidth - startX) / horizontalGap) || 3;
 
             extractedNames.forEach((name, index) => {
-                // Check if a block with this exact text name already exists in BDD to avoid duplicates
-                let exists = false;
-                for (let existingId in modelState.bdd.blocks) {
-                    if (modelState.bdd.blocks[existingId].text === name) { exists = true; break; }
+                let existingId = null;
+                for (let id in modelState.definitions.blocks) {
+                    if (modelState.definitions.blocks[id].text === name) { existingId = id; break; }
                 }
-                if (exists) return; // Skip duplicate definitions safely
 
-                const id = 'node_' + modelState.bdd.blockCounter++;
-                const col = index % maxColumns;
-                const row = Math.floor(index / maxColumns);
+                // Spawns uniquely on canvas only if missing from the current system dictionary
+                if (!existingId) {
+                    const id = 'def_' + modelState.definitions.blockCounter++;
+                    const col = index % maxColumns;
+                    const row = Math.floor(index / maxColumns);
 
-                const currentX = startX + (col * horizontalGap);
-                const currentY = startY + (row * verticalGap);
-
-                modelState.bdd.blocks[id] = {
-                    left: currentX + 'px',
-                    top: currentY + 'px',
-                    width: '130px',
-                    height: '80px',
-                    text: name,
-                    ports: []
-                };
+                    modelState.definitions.blocks[id] = {
+                        left: (startX + (col * horizontalGap)) + 'px',
+                        top: (startY + (row * verticalGap)) + 'px',
+                        width: '130px',
+                        height: '80px',
+                        text: name,
+                        ports: []
+                    };
+                }
             });
 
             clearSelection();
             renderActiveView();
             saveModel();
-            importPanel.classList.add('collapsed'); // auto-collapse console on compile finish
+            importPanel.classList.add('collapsed');
         }
 
         function handleContextSwitchAction() {
             checkpoint();
-            if (modelState.currentView === 'BDD') {
-                const targetBlockId = selectedId;
-                if (!modelState.ibds[targetBlockId]) {
-                    modelState.ibds[targetBlockId] = { blockCounter: 0, portCounter: 0, connCounter: 0, blocks: {}, ports: {}, connections: {} };
+            if (modelState.currentView === 'DefinitionView') {
+                const targetDefId = selectedId;
+                if (!modelState.usages[targetDefId]) {
+                    modelState.usages[targetDefId] = { blockCounter: 0, portCounter: 0, connCounter: 0, blocks: {}, ports: {}, connections: {} };
                 }
-                modelState.currentView = targetBlockId;
+                modelState.currentView = targetDefId;
             } else {
-                modelState.currentView = 'BDD';
+                modelState.currentView = 'DefinitionView';
             }
             clearSelection();
             renderActiveView();
             saveModel();
         }
 
+        // --- FIXED: DOM Child Tree Verification Layer ---
         function renderActiveView() {
-            canvas.querySelectorAll('.block').forEach(b => b.remove());
-            svgLayer.innerHTML = '';
+            // Safe removal check pattern prevents NotFoundError exceptions
+            const nodes = canvas.querySelectorAll('.block');
+            nodes.forEach(b => {
+                if (canvas.contains(b)) canvas.removeChild(b);
+            });
             
+            svgLayer.innerHTML = '';
             const active = getActiveLayer();
 
-            if (modelState.currentView === 'BDD') {
-                diagramCtx.innerText = "BDD: System Vocabulary";
-                diagramCtx.style.backgroundColor = "var(--accent-bdd)";
-                btnActionCtx.innerText = "Open Internal View (IBD)";
+            if (modelState.currentView === 'DefinitionView') {
+                diagramCtx.innerText = "DefinitionView: Reusable Blueprints";
+                diagramCtx.style.backgroundColor = "var(--accent-def)";
+                btnActionCtx.innerText = "Open Usage View (part)";
                 btnActionCtx.disabled = true;
             } else {
-                const parentBlockName = modelState.bdd.blocks[modelState.currentView]?.text || 'Block';
-                diagramCtx.innerText = `IBD: Internal Assembly of [${parentBlockName}]`;
-                diagramCtx.style.backgroundColor = "var(--accent-ibd)";
-                btnActionCtx.innerText = "Back to Master BDD";
+                const parentDefName = modelState.definitions.blocks[modelState.currentView]?.text || 'Definition';
+                diagramCtx.innerText = `UsageView: Structural Assembly of [${parentDefName}]`;
+                diagramCtx.style.backgroundColor = "var(--accent-usage)";
+                btnActionCtx.innerText = "Back to Definition View";
                 btnActionCtx.disabled = false;
             }
 
@@ -408,7 +421,7 @@
                 block.style.width = bData.width || '130px';
                 block.style.height = bData.height || '80px';
                 
-                const label = (modelState.currentView === 'BDD') ? '«block»' : '«part»';
+                const label = (modelState.currentView === 'DefinitionView') ? '«part def»' : '«part»';
                 block.innerHTML = `<div class="stereotype">${label}</div><div class="text">${bData.text}</div>`;
                 
                 block.addEventListener('mousedown', (e) => onBlockStart(e, bId, e.clientX, e.clientY));
@@ -444,7 +457,6 @@
                     const active = getActiveLayer();
                     const id = 'node_' + active.blockCounter++;
                     
-                    // Adjust click mapping position dynamically relative to bounding rect offset
                     const rect = canvas.getBoundingClientRect();
                     const x = e.clientX - rect.left - 65;
                     const y = e.clientY - rect.top - 40;
@@ -452,7 +464,7 @@
                     active.blocks[id] = {
                         left: x + 'px', top: y + 'px',
                         width: '130px', height: '80px',
-                        text: (modelState.currentView === 'BDD') ? `Block_${active.blockCounter}` : `part_${active.blockCounter}`,
+                        text: (modelState.currentView === 'DefinitionView') ? `PartDef_${active.blockCounter}` : `part_${active.blockCounter}`,
                         ports: []
                     };
                     
@@ -468,6 +480,7 @@
             if (selectedType === 'port') return;
 
             const blockEl = document.getElementById(id);
+            if (!blockEl) return;
             const textEl = blockEl.querySelector('.text');
             const active = getActiveLayer();
 
@@ -495,6 +508,7 @@
             if (e.target.contentEditable === "true" || e.target.classList.contains('port')) return;
             
             const blockEl = document.getElementById(id);
+            if (!blockEl) return;
             const rect = blockEl.getBoundingClientRect();
             const x = clientX - rect.left;
             const y = clientY - rect.top;
@@ -584,6 +598,7 @@
         function handleMoveEvent(clientX, clientY) {
             if (isDragging && dragTargetId) {
                 const blockEl = document.getElementById(dragTargetId);
+                if (!blockEl) return;
                 const active = getActiveLayer();
                 
                 const rect = canvas.getBoundingClientRect();
@@ -615,19 +630,21 @@
                     };
                 };
 
-                const p1 = getPos(conn.from); const p2 = getPos(conn.to);
-                const getCtrl = (p) => {
-                    if (p.edge === 'left') return { x: p.x - 45, y: p.y };
-                    if (p.edge === 'right') return { x: p.x + 45, y: p.y };
-                    if (p.edge === 'top') return { x: p.x, y: p.y - 45 };
-                    return { x: p.x, y: p.y + 45 };
-                };
-                
-                const c1 = getCtrl(p1); const c2 = getCtrl(p2);
-                const d = `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`;
-                
-                g.querySelector('.connection-line').setAttribute('d', d);
-                g.querySelector('.connection-bg-line').setAttribute('d', d);
+                try {
+                    const p1 = getPos(conn.from); const p2 = getPos(conn.to);
+                    const getCtrl = (p) => {
+                        if (p.edge === 'left') return { x: p.x - 45, y: p.y };
+                        if (p.edge === 'right') return { x: p.x + 45, y: p.y };
+                        if (p.edge === 'top') return { x: p.x, y: p.y - 45 };
+                        return { x: p.x, y: p.y + 45 };
+                    };
+                    
+                    const c1 = getCtrl(p1); const c2 = getCtrl(p2);
+                    const d = `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`;
+                    
+                    g.querySelector('.connection-line').setAttribute('d', d);
+                    g.querySelector('.connection-bg-line').setAttribute('d', d);
+                } catch(err) { /* Catch edge conditions gracefully during mid-render transformations */ }
             });
         }
 
@@ -637,11 +654,12 @@
             clearSelection();
             selectedType = type; selectedId = id;
             const el = document.getElementById(id);
+            if (!el) return;
             
             if (type === 'block') {
                 el.classList.add('selected');
                 btnGrow.disabled = false; btnShrink.disabled = false;
-                if(modelState.currentView === 'BDD') btnActionCtx.disabled = false;
+                if(modelState.currentView === 'DefinitionView') btnActionCtx.disabled = false;
             }
             if (type === 'port') el.classList.add('selected');
             if (type === 'conn') document.getElementById(id).classList.add('selected');
@@ -658,7 +676,7 @@
             }
             selectedType = null; selectedId = null;
             btnDelete.disabled = true; btnGrow.disabled = true; btnShrink.disabled = true;
-            if(modelState.currentView === 'BDD') btnActionCtx.disabled = true;
+            if(modelState.currentView === 'DefinitionView') btnActionCtx.disabled = true;
         }
 
         function resizeBlock(dw, dh) {
@@ -666,6 +684,7 @@
             checkpoint();
             const active = getActiveLayer();
             const el = document.getElementById(selectedId);
+            if (!el) return;
             
             active.blocks[selectedId].width = Math.max(90, el.offsetWidth + dw) + 'px';
             active.blocks[selectedId].height = Math.max(60, el.offsetHeight + dh) + 'px';
@@ -681,8 +700,8 @@
             const active = getActiveLayer();
 
             if (selectedType === 'block') {
-                if (modelState.currentView === 'BDD' && modelState.ibds[selectedId]) {
-                    delete modelState.ibds[selectedId];
+                if (modelState.currentView === 'DefinitionView' && modelState.usages[selectedId]) {
+                    delete modelState.usages[selectedId];
                 }
                 const portsToClean = [...active.blocks[selectedId].ports];
                 portsToClean.forEach(pId => {
@@ -708,7 +727,6 @@
             saveModel();
         }
 
-        // --- History & Persistence Drivers ---
         function checkpoint() { historyStack.push(JSON.parse(JSON.stringify(modelState))); btnUndo.disabled = false; }
         function saveModel() { localStorage.setItem(STORAGE_KEY, JSON.stringify(modelState)); }
         function loadModel() {
