@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SysML v2 Parallel Definition & Usage Modeler</title>
+    <title>SysML v2 Diamond Composition & Spaced-Port Modeler</title>
     <style>
         :root {
             --bg-color: #1e1e1e;
@@ -11,196 +11,130 @@
             --border-color: #555;
             --text-color: #e0e0e0;
             --accent-def: #007acc;
-            --accent-usage: #8a2be2;
+            --accent-action: #d06010;
+            --accent-connect: #8a2be2;
             --selected-color: #ff9900;
-            --danger-color: #ff3333;
             --port-color: #4caf50;
             --sidebar-width: 320px;
         }
 
         body {
-            margin: 0;
-            padding: 0;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
-            user-select: none;
-            touch-action: none;
+            overflow: hidden; user-select: none; touch-action: none;
         }
 
-        #app-container {
-            display: flex;
-            width: 100vw;
-            height: 100vh;
-        }
+        #app-container { display: flex; width: 100vw; height: 100vh; }
 
         #import-panel {
-            width: var(--sidebar-width);
-            height: 100%;
-            background-color: #1a1a1a;
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            box-sizing: border-box;
-            transition: margin-left 0.3s ease;
-            z-index: 10;
+            width: var(--sidebar-width); height: 100%;
+            background-color: #1a1a1a; border-right: 1px solid var(--border-color);
+            display: flex; flex-direction: column; box-sizing: border-box;
+            transition: margin-left 0.3s ease; z-index: 10;
         }
-
-        #import-panel.collapsed {
-            margin-left: calc(-1 * var(--sidebar-width));
-        }
+        #import-panel.collapsed { margin-left: calc(-1 * var(--sidebar-width)); }
 
         .panel-header {
-            padding: 12px;
-            background-color: #111;
-            font-size: 11px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            padding: 12px; background-color: #111; font-size: 11px; font-weight: bold;
+            text-transform: uppercase; letter-spacing: 0.5px;
             border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            display: flex; justify-content: space-between; align-items: center;
         }
 
         #txt-import-area {
-            flex: 1;
-            background-color: #252526;
-            color: #a7dbf7;
-            border: none;
-            padding: 12px;
-            font-family: 'Consolas', 'Courier New', Courier, monospace;
-            font-size: 12px;
-            resize: none;
-            outline: none;
-            line-height: 1.5;
+            flex: 1; background-color: #252526; color: #a7dbf7;
+            border: none; padding: 12px; font-family: 'Consolas', monospace;
+            font-size: 12px; resize: none; outline: none; line-height: 1.5;
         }
 
-        .panel-footer {
-            padding: 10px;
-            background-color: #111;
-            border-top: 1px solid var(--border-color);
-        }
-
+        .panel-footer { padding: 10px; background-color: #111; border-top: 1px solid var(--border-color); }
         .primary-btn {
-            width: 100%;
-            background-color: var(--accent-def);
-            color: white;
-            border: none;
-            padding: 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 12px;
+            width: 100%; background-color: var(--accent-def); color: white;
+            border: none; padding: 8px; border-radius: 4px; font-weight: bold;
+            cursor: pointer; font-size: 11px; text-transform: uppercase;
         }
 
-        .primary-btn:hover { background-color: #0062a3; }
-
-        #workspace {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            position: relative;
-        }
+        #workspace { flex: 1; display: flex; flex-direction: column; height: 100%; position: relative; }
 
         #toolbar {
-            height: 45px;
-            background-color: #111;
-            display: flex;
-            align-items: center;
-            padding: 0 15px;
-            border-bottom: 1px solid var(--border-color);
-            gap: 8px;
-            box-sizing: border-box;
+            height: 50px; background-color: #111; display: flex; align-items: center;
+            padding: 0 15px; border-bottom: 1px solid var(--border-color); gap: 8px; box-sizing: border-box;
         }
-
-        #toolbar h1 {
-            font-size: 13px;
-            margin: 0;
-            font-weight: 600;
-            color: #aaa;
-            text-transform: uppercase;
-        }
+        #toolbar h1 { font-size: 13px; margin: 0; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
 
         #diagram-context {
-            background-color: var(--accent-def);
-            color: #fff;
-            font-size: 11px;
-            padding: 4px 8px;
-            border-radius: 3px;
-            font-weight: bold;
-            margin-right: auto;
-            text-transform: uppercase;
+            font-size: 11px; padding: 5px 10px; border-radius: 3px; font-weight: bold;
+            margin-right: auto; text-transform: uppercase; letter-spacing: 0.5px;
         }
+
+        .view-switcher-group { display: flex; border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden; margin-right: 15px; }
+        .switch-btn {
+            background-color: #252526; border: none; color: #aaa; padding: 6px 12px;
+            font-size: 11px; font-weight: bold; cursor: pointer; text-transform: uppercase;
+        }
+        .switch-btn.active { color: #fff; }
+        #btn-view-struct.active { background-color: var(--accent-def); }
+        #btn-view-conn.active { background-color: var(--accent-connect); }
+        #btn-view-action.active { background-color: var(--accent-action); }
 
         .tool-btn {
-            background-color: #2d2d2d;
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            width: 34px;
-            height: 34px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background-color: #2d2d2d; border: 1px solid var(--border-color); color: var(--text-color);
+            width: 34px; height: 34px; border-radius: 4px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-weight: bold;
         }
-
         .tool-btn:disabled { opacity: 0.2; cursor: not-allowed; }
-        #btn-action-context { font-size: 11px; width: auto; padding: 0 10px; font-weight: bold; background-color: #333; }
 
         #canvas {
-            flex: 1;
-            background-color: var(--canvas-bg);
-            background-image: 
-                linear-gradient(to right, #3a3a3a 1px, transparent 1px),
-                linear-gradient(to bottom, #3a3a3a 1px, transparent 1px);
-            background-size: 20px 20px;
-            position: relative;
-            overflow: hidden;
+            flex: 1; background-color: var(--canvas-bg);
+            background-image: linear-gradient(to right, #333 1px, transparent 1px), linear-gradient(to bottom, #333 1px, transparent 1px);
+            background-size: 20px 20px; position: relative; overflow: hidden;
         }
 
         .block {
-            position: absolute;
-            background-color: #252526;
-            border: 2px solid var(--text-color);
-            color: var(--text-color);
-            box-sizing: border-box;
-            cursor: move;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            padding: 8px;
-            border-radius: 3px;
-            z-index: 2;
+            position: absolute; background-color: #202020; border: 2px solid #777;
+            color: var(--text-color); box-sizing: border-box; cursor: move;
+            display: flex; flex-direction: column; border-radius: 4px; min-width: 180px; z-index: 2;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4); overflow: visible; /* Changed to visible to let absolute diamonds mount cleanly */
         }
-
-        .block .stereotype { font-size: 10px; color: #888; font-style: italic; pointer-events: none; }
-        .block .text { font-size: 13px; font-weight: bold; margin-top: 4px; text-align: center; width: 100%; word-break: break-all; outline: none; pointer-events: none; }
         .block.selected { border: 2px dashed var(--selected-color); }
-
-        .port {
-            width: 14px;
-            height: 14px;
-            background-color: var(--port-color);
-            position: absolute;
-            border: 1px solid #fff;
-            cursor: pointer;
-            z-index: 10;
-            box-sizing: border-box;
-            border-radius: 2px;
+        
+        .block-header {
+            background-color: #2d2d2d; padding: 6px; text-align: center;
+            border-bottom: 1px solid var(--border-color);
         }
-        .port.selected { background-color: var(--selected-color); box-shadow: 0 0 6px var(--selected-color); }
+        .block-header .stereotype { font-size: 9px; color: #888; font-style: italic; text-transform: uppercase; }
+        .block-header .text { font-size: 13px; font-weight: bold; color: #fff; outline: none; margin-top: 2px; }
+
+        .compartment {
+            background-color: #161616; padding: 6px; font-size: 11px;
+            border-bottom: 1px solid #333; display: flex; flex-direction: column; gap: 4px;
+        }
+        .compartment-title { font-size: 9px; color: #55a0ff; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+        .compartment-item { color: #ccc; outline: none; padding: 2px 4px; border-radius: 2px; word-break: break-all; }
+
+        /* Unified Port and Structural Composition Diamond Classes */
+        .port {
+            width: 12px; height: 12px; background-color: var(--port-color); position: absolute;
+            border: 1px solid #fff; cursor: pointer; z-index: 10; box-sizing: border-box; border-radius: 2px;
+        }
+        .port.selected { background-color: var(--selected-color); box-shadow: 0 0 8px var(--selected-color); }
+
+        .structural-diamond {
+            width: 12px; height: 12px; background-color: #fff; border: 2px solid #007acc;
+            position: absolute; bottom: -7px; left: calc(50% - 6px);
+            transform: rotate(45deg); cursor: pointer; z-index: 11; box-sizing: border-box;
+        }
+        .structural-diamond.selected { background-color: var(--selected-color); border-color: #fff; }
 
         #svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
         .connection-wrapper { cursor: pointer; pointer-events: visibleStroke; }
         .connection-bg-line { stroke: transparent; stroke-width: 14; fill: none; }
-        .connection-line { stroke: var(--text-color); stroke-width: 2; fill: none; }
+        .connection-line { stroke: #aaa; stroke-width: 2; fill: none; }
         .connection-wrapper.selected .connection-line { stroke: var(--selected-color); stroke-dasharray: 4; }
+        
+        .struct-line { stroke: var(--accent-def); stroke-width: 2; marker-end: url(#diamond-marker); }
+        .action-line { stroke: var(--accent-action); stroke-width: 2.5; marker-end: url(#arrow); }
     </style>
 </head>
 <body>
@@ -208,29 +142,43 @@
     <div id="app-container">
         <div id="import-panel">
             <div class="panel-header">
-                <span>SysML v2 Script Panel</span>
+                <span>SysML v2 Structural Compiler</span>
                 <button id="btn-toggle-panel" style="background:transparent; border:none; color:#aaa; cursor:pointer;">◀</button>
             </div>
-            <textarea id="txt-import-area" placeholder="// Paste SysML v2 definitions here...&#10;part def FlightController;&#10;part def SensorCluster;&#10;part def PowerSubsystem;"></textarea>
+            <textarea id="txt-import-area" placeholder="Enter part def layers here..."></textarea>
             <div class="panel-footer">
-                <button id="btn-compile" class="primary-btn">Compile to DefinitionView</button>
+                <button id="btn-compile" class="primary-btn">Sync to System Canvas</button>
             </div>
         </div>
 
         <div id="workspace">
             <div id="toolbar">
-                <button id="btn-open-panel" class="tool-btn" title="Open SysML v2 Script Editor" style="font-size:12px; width:auto; padding:0 8px;">📑 Script v2</button>
+                <button id="btn-open-panel" class="tool-btn" title="Open Script Panel" style="font-size:11px; width:auto; padding:0 8px;">📑 Script</button>
                 <h1>SysML v2</h1>
-                <div id="diagram-context">DefinitionView: Reusable Blueprints</div>
-                <button id="btn-action-context" class="tool-btn" disabled>Open Usage View (part)</button>
-                <button id="btn-undo" class="tool-btn" title="Undo Layout Action">↶</button>
+                
+                <div id="diagram-context" style="background-color: var(--accent-def);">Structure View: Component Composition</div>
+                
+                <div class="view-switcher-group">
+                    <button id="btn-view-struct" class="switch-btn active" title="View/Edit Internal Composition Diamonds">1. Structure</button>
+                    <button id="btn-view-conn" class="switch-btn" title="View/Edit Connectivity Interface Ports">2. Connect</button>
+                    <button id="btn-view-action" class="switch-btn" title="View/Edit Control Behavior Flows">3. Action</button>
+                </div>
+
+                <button id="btn-undo" class="tool-btn" title="Undo Action">↶</button>
                 <button id="btn-delete" class="tool-btn" title="Delete Selection">🗑</button>
-                <button id="btn-grow" class="tool-btn" title="Scale Up Node" disabled>＋</button>
-                <button id="btn-shrink" class="tool-btn" title="Scale Down Node" disabled>－</button>
             </div>
             
             <div id="canvas">
-                <svg id="svg-layer"></svg>
+                <svg id="svg-layer">
+                    <defs>
+                        <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                          <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--accent-action)" />
+                        </marker>
+                        <marker id="diamond-marker" viewBox="0 0 16 16" refX="12" refY="8" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                          <path d="M 8 2 L 14 8 L 8 14 L 2 8 Z" fill="#fff" stroke="var(--accent-def)" stroke-width="2" />
+                        </marker>
+                    </defs>
+                </svg>
             </div>
         </div>
     </div>
@@ -239,11 +187,12 @@
         const canvas = document.getElementById('canvas');
         const svgLayer = document.getElementById('svg-layer');
         const diagramCtx = document.getElementById('diagram-context');
-        const btnActionCtx = document.getElementById('btn-action-context');
+        
+        const btnViewStruct = document.getElementById('btn-view-struct');
+        const btnViewConn = document.getElementById('btn-view-conn');
+        const btnViewAction = document.getElementById('btn-view-action');
         const btnUndo = document.getElementById('btn-undo');
         const btnDelete = document.getElementById('btn-delete');
-        const btnGrow = document.getElementById('btn-grow');
-        const btnShrink = document.getElementById('btn-shrink');
         
         const importPanel = document.getElementById('import-panel');
         const btnTogglePanel = document.getElementById('btn-toggle-panel');
@@ -251,115 +200,89 @@
         const btnCompile = document.getElementById('btn-compile');
         const txtImportArea = document.getElementById('txt-import-area');
 
-        let selectedType = null; 
-        let selectedId = null;
-        let isDragging = false;
-        let dragTargetId = null;
-        let dragStartX, dragStartY;
+        let selectedType = null, selectedId = null;
+        let isDragging = false, dragTargetId = null, dragStartX = 0, dragStartY = 0;
 
         let modelState = {
-            currentView: 'DefinitionView', 
-            definitions: { blockCounter: 0, portCounter: 0, connCounter: 0, blocks: {}, ports: {}, connections: {} },
-            usages: {} 
+            currentMode: 'STRUCTURE', 
+            definitions: { blockCounter: 0, portCounter: 0, connCounter: 0, blocks: {}, ports: {}, connections: {} }
         };
 
         const historyStack = [];
-        const STORAGE_KEY = 'sysml_v2_parallel_modelling_state';
+        const STORAGE_KEY = 'sysml_v2_diamond_view_state';
 
-        txtImportArea.value = `package CoreSystemArchitecture {\n    part def GroundControlStation;\n    part def UnmannedAerialVehicle;\n    part def NavigationArray;\n    part def PropulsionAssembly;\n}`;
+        txtImportArea.value = `package MissionControl {\n    part def FlightComputer;\n    part def SensorArray;\n    part def TelemetryUnit;\n}`;
 
         canvas.addEventListener('click', onCanvasClick);
-        btnActionCtx.addEventListener('click', handleContextSwitchAction);
-        
         btnTogglePanel.addEventListener('click', () => importPanel.classList.add('collapsed'));
         btnOpenPanel.addEventListener('click', () => importPanel.classList.remove('collapsed'));
-        btnCompile.addEventListener('click', compileSysMLV2Text);
+        btnCompile.addEventListener('click', compileV2EngineText);
+
+        btnViewStruct.addEventListener('click', () => changeMode('STRUCTURE'));
+        btnViewConn.addEventListener('click', () => changeMode('CONNECT'));
+        btnViewAction.addEventListener('click', () => changeMode('ACTION'));
 
         document.addEventListener('mousemove', (e) => handleMoveEvent(e.clientX, e.clientY));
-        document.addEventListener('touchmove', (e) => {
-            if(isDragging) { e.preventDefault(); const t = e.touches[0]; handleMoveEvent(t.clientX, t.clientY); }
-        }, { passive: false });
-
         document.addEventListener('mouseup', onPointerEnd);
-        document.addEventListener('touchend', onPointerEnd);
-
         btnDelete.addEventListener('click', deleteSelected);
         btnUndo.addEventListener('click', popHistory);
-        btnGrow.addEventListener('click', () => resizeBlock(20, 15));
-        btnShrink.addEventListener('click', () => resizeBlock(-20, -15));
 
         window.addEventListener('DOMContentLoaded', loadModel);
 
-        function getActiveLayer() {
-            return modelState.currentView === 'DefinitionView' ? modelState.definitions : modelState.usages[modelState.currentView];
+        function changeMode(targetMode) {
+            checkpoint();
+            modelState.currentMode = targetMode;
+            if(targetMode === 'STRUCTURE') {
+                diagramCtx.innerText = `Structure View: Component Composition`;
+                diagramCtx.style.backgroundColor = "var(--accent-def)";
+            } else if (targetMode === 'CONNECT') {
+                diagramCtx.innerText = `Connection View: Dynamic Port Wire Interfaces`;
+                diagramCtx.style.backgroundColor = "var(--accent-connect)";
+            } else if (targetMode === 'ACTION') {
+                diagramCtx.innerText = `Action View: Sequential Execution Control Flows`;
+                diagramCtx.style.backgroundColor = "var(--accent-action)";
+            }
+            clearSelection();
+            renderActiveView();
+            saveModel();
         }
 
-        // --- FIXED: Smart Sync Script Parser Engine ---
-        function compileSysMLV2Text() {
+        function compileV2EngineText() {
             const codeText = txtImportArea.value;
             const partDefRegex = /part\s+def\s+([A-Za-z0-9_]+)/g;
-            
-            let match;
-            const extractedNames = [];
+            let match, extractedNames = [];
             
             while ((match = partDefRegex.exec(codeText)) !== null) {
-                if (match[1] && !extractedNames.includes(match[1])) {
-                    extractedNames.push(match[1]);
-                }
+                if (match[1] && !extractedNames.includes(match[1])) extractedNames.push(match[1]);
             }
-
-            if (extractedNames.length === 0) {
-                alert("No SysML v2 definitions detected. Declare architectural templates using standard syntax: 'part def Name;'");
-                return;
-            }
+            if (extractedNames.length === 0) { alert("No valid definitions discovered."); return; }
 
             checkpoint();
-            modelState.currentView = 'DefinitionView';
-
-            // 1. Prune existing canvas items missing from the new code text
-            for (let existingId in modelState.definitions.blocks) {
-                const blockName = modelState.definitions.blocks[existingId].text;
-                if (!extractedNames.includes(blockName)) {
-                    // Purge internal deep mapping states for this definition
-                    if (modelState.usages[existingId]) delete modelState.usages[existingId];
-                    
-                    // Clear structural connections attached to ports of this block
-                    const portsToClean = [...modelState.definitions.blocks[existingId].ports];
-                    portsToClean.forEach(pId => {
-                        for (let cId in modelState.definitions.connections) {
-                            if (modelState.definitions.connections[cId].from === pId || modelState.definitions.connections[cId].to === pId) {
-                                delete modelState.definitions.connections[cId];
-                            }
-                        }
-                        delete modelState.definitions.ports[pId];
-                    });
-                    delete modelState.definitions.blocks[existingId];
+            
+            for (let id in modelState.definitions.blocks) {
+                if (!extractedNames.includes(modelState.definitions.blocks[id].text)) {
+                    delete modelState.definitions.blocks[id];
                 }
             }
 
-            // 2. Add elements while keeping position of already existing items intact
-            let startX = 60; let startY = 60;
-            const horizontalGap = 160; const verticalGap = 110;
-            const maxColumns = Math.floor((canvas.clientWidth - startX) / horizontalGap) || 3;
+            let startX = 60, startY = 80, gapX = 220, gapY = 220;
+            const maxCols = Math.floor((canvas.clientWidth - 50) / gapX) || 2;
 
-            extractedNames.forEach((name, index) => {
+            extractedNames.forEach((name, i) => {
                 let existingId = null;
                 for (let id in modelState.definitions.blocks) {
                     if (modelState.definitions.blocks[id].text === name) { existingId = id; break; }
                 }
 
-                // Spawns uniquely on canvas only if missing from the current system dictionary
                 if (!existingId) {
                     const id = 'def_' + modelState.definitions.blockCounter++;
-                    const col = index % maxColumns;
-                    const row = Math.floor(index / maxColumns);
-
+                    const col = i % maxCols; const row = Math.floor(i / maxCols);
                     modelState.definitions.blocks[id] = {
-                        left: (startX + (col * horizontalGap)) + 'px',
-                        top: (startY + (row * verticalGap)) + 'px',
-                        width: '130px',
-                        height: '80px',
+                        left: (startX + (col * gapX)) + 'px',
+                        top: (startY + (row * gapY)) + 'px',
                         text: name,
+                        partsCompartment: ['+ sub_module_A'],
+                        actionsCompartment: ['▸ compute_step()'],
                         ports: []
                     };
                 }
@@ -371,205 +294,191 @@
             importPanel.classList.add('collapsed');
         }
 
-        function handleContextSwitchAction() {
-            checkpoint();
-            if (modelState.currentView === 'DefinitionView') {
-                const targetDefId = selectedId;
-                if (!modelState.usages[targetDefId]) {
-                    modelState.usages[targetDefId] = { blockCounter: 0, portCounter: 0, connCounter: 0, blocks: {}, ports: {}, connections: {} };
-                }
-                modelState.currentView = targetDefId;
-            } else {
-                modelState.currentView = 'DefinitionView';
-            }
-            clearSelection();
-            renderActiveView();
-            saveModel();
-        }
-
-        // --- FIXED: DOM Child Tree Verification Layer ---
         function renderActiveView() {
-            // Safe removal check pattern prevents NotFoundError exceptions
-            const nodes = canvas.querySelectorAll('.block');
-            nodes.forEach(b => {
-                if (canvas.contains(b)) canvas.removeChild(b);
-            });
-            
-            svgLayer.innerHTML = '';
-            const active = getActiveLayer();
+            canvas.querySelectorAll('.block').forEach(b => { if (canvas.contains(b)) canvas.removeChild(b); });
+            svgLayer.querySelectorAll('.connection-wrapper').forEach(w => w.remove());
 
-            if (modelState.currentView === 'DefinitionView') {
-                diagramCtx.innerText = "DefinitionView: Reusable Blueprints";
-                diagramCtx.style.backgroundColor = "var(--accent-def)";
-                btnActionCtx.innerText = "Open Usage View (part)";
-                btnActionCtx.disabled = true;
-            } else {
-                const parentDefName = modelState.definitions.blocks[modelState.currentView]?.text || 'Definition';
-                diagramCtx.innerText = `UsageView: Structural Assembly of [${parentDefName}]`;
-                diagramCtx.style.backgroundColor = "var(--accent-usage)";
-                btnActionCtx.innerText = "Back to Definition View";
-                btnActionCtx.disabled = false;
-            }
+            const active = modelState.definitions;
 
             for (let bId in active.blocks) {
                 const bData = active.blocks[bId];
                 const block = document.createElement('div');
-                block.className = 'block';
-                block.id = bId;
-                block.style.left = bData.left;
-                block.style.top = bData.top;
-                block.style.width = bData.width || '130px';
-                block.style.height = bData.height || '80px';
+                block.className = 'block'; block.id = bId;
+                block.style.left = bData.left; block.style.top = bData.top;
+
+                const header = document.createElement('div');
+                header.className = 'block-header';
+                header.innerHTML = `<div class="stereotype">«part def»</div><div class="text">${bData.text}</div>`;
                 
-                const label = (modelState.currentView === 'DefinitionView') ? '«part def»' : '«part»';
-                block.innerHTML = `<div class="stereotype">${label}</div><div class="text">${bData.text}</div>`;
-                
-                block.addEventListener('mousedown', (e) => onBlockStart(e, bId, e.clientX, e.clientY));
-                block.addEventListener('touchstart', (e) => { const t = e.touches[0]; onBlockStart(e, bId, t.clientX, t.clientY); }, {passive: false});
-                block.addEventListener('click', (e) => onBlockClick(e, bId));
-                
-                canvas.appendChild(block);
-                
-                bData.ports.forEach(pId => {
-                    const pData = active.ports[pId];
-                    const port = document.createElement('div');
-                    port.className = 'port';
-                    port.id = pId;
-                    port.style.left = `calc(${pData.pctX}% - 7px)`;
-                    port.style.top = `calc(${pData.pctY}% - 7px)`;
-                    port.addEventListener('click', (e) => onPortClick(e, pId));
-                    block.appendChild(port);
+                header.addEventListener('mousedown', (e) => onBlockDragStart(e, bId, e.clientX, e.clientY));
+                header.addEventListener('dblclick', (e) => {
+                    e.stopPropagation(); const txtEl = header.querySelector('.text');
+                    txtEl.contentEditable = "true"; txtEl.focus();
+                    txtEl.addEventListener('blur', () => {
+                        checkpoint(); bData.text = txtEl.innerText; txtEl.contentEditable = "false"; saveModel();
+                    }, { once: true });
                 });
+                header.addEventListener('click', (e) => { e.stopPropagation(); setSelection('block', bId); });
+                block.appendChild(header);
+
+                // Structural Parts Compartment
+                const partComp = document.createElement('div');
+                partComp.className = 'compartment';
+                partComp.innerHTML = `<div class="compartment-title">parts usage</div>`;
+                bData.partsCompartment.forEach((item, index) => {
+                    const row = document.createElement('div'); row.className = 'compartment-item'; row.innerText = item;
+                    partComp.appendChild(row);
+                });
+                block.appendChild(partComp);
+
+                // Behavioral Actions Compartment
+                const actionComp = document.createElement('div');
+                actionComp.className = 'compartment';
+                actionComp.innerHTML = `<div class="compartment-title">actions flow</div>`;
+                bData.actionsCompartment.forEach((item, index) => {
+                    const row = document.createElement('div'); row.className = 'compartment-item'; row.innerText = item;
+                    actionComp.appendChild(row);
+                });
+                block.appendChild(actionComp);
+
+                // REUREMENT: Add permanent Base Diamond to every block when in STRUCTURE mode
+                if (modelState.currentMode === 'STRUCTURE') {
+                    const diamondId = 'diamond_' + bId;
+                    const diamond = document.createElement('div');
+                    diamond.className = 'structural-diamond';
+                    diamond.id = diamondId;
+                    if (selectedType === 'diamond' && selectedId === diamondId) diamond.classList.add('selected');
+                    
+                    diamond.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        onDiamondClick(diamondId, bId);
+                    });
+                    block.appendChild(diamond);
+                }
+
+                canvas.appendChild(block);
+
+                // Render matching interfaces for CONNECT & ACTION views
+                if (modelState.currentMode === 'CONNECT' || modelState.currentMode === 'ACTION') {
+                    bData.ports.forEach(pId => {
+                        const pData = active.ports[pId];
+                        if (!pData) return;
+                        const port = document.createElement('div');
+                        port.className = 'port'; port.id = pId;
+                        port.style.left = `calc(${pData.pctX}% - 6px)`;
+                        port.style.top = `calc(${pData.pctY}% - 6px)`;
+                        if (modelState.currentMode === 'ACTION') port.style.backgroundColor = 'var(--accent-action)';
+                        
+                        port.addEventListener('click', (e) => { e.stopPropagation(); onPortClick(pId); });
+                        block.appendChild(port);
+                    });
+                }
             }
 
             for (let cId in active.connections) {
-                buildConnectionUI(cId, active.connections[cId].from, active.connections[cId].to);
+                const conn = active.connections[cId];
+                if (conn.type === modelState.currentMode) {
+                    buildConnectionUI(cId, conn.from, conn.to, conn.type);
+                }
             }
             updateLines();
         }
 
         function onCanvasClick(e) {
-            if (e.target === canvas || e.target === svgLayer) {
-                if (selectedId || selectedType) {
-                    clearSelection();
-                } else {
-                    checkpoint();
-                    const active = getActiveLayer();
-                    const id = 'node_' + active.blockCounter++;
-                    
-                    const rect = canvas.getBoundingClientRect();
-                    const x = e.clientX - rect.left - 65;
-                    const y = e.clientY - rect.top - 40;
-
-                    active.blocks[id] = {
-                        left: x + 'px', top: y + 'px',
-                        width: '130px', height: '80px',
-                        text: (modelState.currentView === 'DefinitionView') ? `PartDef_${active.blockCounter}` : `part_${active.blockCounter}`,
-                        ports: []
-                    };
-                    
-                    renderActiveView();
-                    setSelection('block', id);
-                    saveModel();
-                }
-            }
-        }
-
-        function onBlockClick(e, id) {
-            e.stopPropagation();
-            if (selectedType === 'port') return;
-
-            const blockEl = document.getElementById(id);
-            if (!blockEl) return;
-            const textEl = blockEl.querySelector('.text');
-            const active = getActiveLayer();
-
-            if (selectedId === id && selectedType === 'block') {
-                textEl.style.pointerEvents = 'auto';
-                textEl.contentEditable = "true";
-                textEl.focus();
-                document.execCommand('selectAll', false, null);
+            if (e.target === canvas || e.target.tagName === 'svg') {
+                if (selectedId) { clearSelection(); return; }
+                checkpoint();
+                const active = modelState.definitions;
+                const id = 'def_' + active.blockCounter++;
+                const rect = canvas.getBoundingClientRect();
                 
-                textEl.addEventListener('blur', () => {
-                    if(active.blocks[id].text !== textEl.innerText) {
-                        checkpoint();
-                        active.blocks[id].text = textEl.innerText;
-                    }
-                    textEl.contentEditable = "false";
-                    textEl.style.pointerEvents = 'none';
-                    renderActiveView();
-                }, { once: true });
-            } else {
+                active.blocks[id] = {
+                    left: (e.clientX - rect.left - 90) + 'px', top: (e.clientY - rect.top - 60) + 'px',
+                    text: `Component_${active.blockCounter}`,
+                    partsCompartment: ['+ structural_part'], actionsCompartment: ['▸ action_routine'],
+                    ports: []
+                };
+                renderActiveView();
                 setSelection('block', id);
+                saveModel();
             }
         }
 
-        function onBlockStart(e, id, clientX, clientY) {
-            if (e.target.contentEditable === "true" || e.target.classList.contains('port')) return;
+        function onBlockDragStart(e, id, clientX, clientY) {
+            if (e.target.contentEditable === "true" || e.target.classList.contains('structural-diamond')) return;
             
             const blockEl = document.getElementById(id);
-            if (!blockEl) return;
             const rect = blockEl.getBoundingClientRect();
-            const x = clientX - rect.left;
-            const y = clientY - rect.top;
-            const borderThresh = 12; 
-            const active = getActiveLayer();
+            const x = clientX - rect.left; const y = clientY - rect.top;
+            const borderThresh = 15;
+            const active = modelState.definitions;
 
-            if (x <= borderThresh || x >= rect.width - borderThresh || y <= borderThresh || y >= rect.height - borderThresh) {
-                e.stopPropagation();
-                e.preventDefault();
+            // Generate peripheral standard ports in CONNECT/ACTION views
+            if ((x <= borderThresh || x >= rect.width - borderThresh || y <= borderThresh || y >= rect.height - borderThresh) && modelState.currentMode !== 'STRUCTURE') {
+                e.stopPropagation(); e.preventDefault();
+                checkpoint();
                 
-                const OVERLAP_RADIUS = 16; 
-                let matchedPortId = null;
+                let pctX = 50, pctY = 50, edge = 'top';
+                const minDist = Math.min(x, rect.width - x, y, rect.height - y);
 
-                for (let pId of active.blocks[id].ports) {
-                    const portEl = document.getElementById(pId);
-                    if (!portEl) continue;
-                    const distance = Math.hypot(x - (portEl.offsetLeft + 7), y - (portEl.offsetTop + 7));
-                    if (distance <= OVERLAP_RADIUS) { matchedPortId = pId; break; }
-                }
+                if (minDist === x) { pctX = 0; pctY = (y / rect.height) * 100; edge = 'left'; }
+                else if (minDist === (rect.width - x)) { pctX = 100; pctY = (y / rect.height) * 100; edge = 'right'; }
+                else if (minDist === y) { pctX = (x / rect.width) * 100; pctY = 0; edge = 'top'; }
+                else { pctX = (x / rect.width) * 100; pctY = 100; edge = 'bottom'; }
 
-                if (matchedPortId) {
-                    onPortClick(null, matchedPortId);
-                } else {
-                    checkpoint();
-                    const portId = 'port_' + active.portCounter++;
-                    
-                    let pctX = 50, pctY = 50, edge = 'top';
-                    const minDist = Math.min(x, rect.width - x, y, rect.height - y);
-                    if (minDist === x) { pctX = 0; pctY = (y / rect.height) * 100; edge = 'left'; }
-                    else if (minDist === (rect.width - x)) { pctX = 100; pctY = (y / rect.height) * 100; edge = 'right'; }
-                    else if (minDist === y) { pctX = (x / rect.width) * 100; pctY = 0; edge = 'top'; }
-                    else if (minDist === (rect.height - y)) { pctX = (x / rect.width) * 100; pctY = 100; edge = 'bottom'; }
+                // REQUIREMENT: Safe Port Anti-Overlap Placement Routine
+                const BUFFER = 20; // Required distance between boundaries
+                bData_ports = active.blocks[id].ports;
+                bData_ports.forEach(existingPortId => {
+                    const ep = active.ports[existingPortId];
+                    if (ep && ep.edge === edge) {
+                        const axisDiff = (edge === 'left' || edge === 'right') ? Math.abs(ep.pctY - pctY) : Math.abs(ep.pctX - pctX);
+                        if (axisDiff < (BUFFER / 2)) {
+                            if (edge === 'left' || edge === 'right') pctY = Math.min(95, pctY + 15);
+                            else pctX = Math.min(95, pctX + 15);
+                        }
+                    }
+                });
 
-                    active.ports[portId] = { blockId: id, pctX, pctY, edge };
-                    active.blocks[id].ports.push(portId);
-                    
-                    renderActiveView();
-                    setSelection('port', portId);
-                    saveModel();
-                }
+                const portId = 'port_' + active.portCounter++;
+                active.ports[portId] = { blockId: id, pctX, pctY, edge };
+                active.blocks[id].ports.push(portId);
+                
+                renderActiveView();
+                setSelection('port', portId);
+                saveModel();
                 return;
             }
 
-            isDragging = true;
-            dragTargetId = id;
+            isDragging = true; dragTargetId = id;
             dragStartX = clientX - parseInt(blockEl.style.left);
             dragStartY = clientY - parseInt(blockEl.style.top);
-            
-            if (selectedType !== 'port' && selectedId !== id) {
-                setSelection('block', id);
-            }
+            setSelection('block', id);
             e.stopPropagation();
         }
 
-        function onPortClick(e, id) {
-            if (e) e.stopPropagation();
-            const active = getActiveLayer();
+        // Structural Diamond Link Sequence Manager
+        function onDiamondClick(diamondId, hostBlockId) {
+            const active = modelState.definitions;
+            if (selectedType === 'diamond' && selectedId !== diamondId) {
+                checkpoint();
+                const connId = 'conn_' + active.connCounter++;
+                // Route link connecting parent diamond downward into child target instance
+                active.connections[connId] = { from: selectedId, to: diamondId, type: 'STRUCTURE' };
+                clearSelection();
+                renderActiveView();
+                saveModel();
+            } else {
+                setSelection('diamond', diamondId);
+            }
+        }
+
+        function onPortClick(id) {
+            const active = modelState.definitions;
             if (selectedType === 'port' && selectedId !== id) {
                 checkpoint();
                 const connId = 'conn_' + active.connCounter++;
-                active.connections[connId] = { from: selectedId, to: id };
+                active.connections[connId] = { from: selectedId, to: id, type: modelState.currentMode };
                 renderActiveView();
                 clearSelection();
                 saveModel();
@@ -578,20 +487,20 @@
             }
         }
 
-        function buildConnectionUI(id, fromId, toId) {
+        function buildConnectionUI(id, fromId, toId, type) {
             const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            g.setAttribute('class', 'connection-wrapper');
-            g.setAttribute('id', id);
+            g.setAttribute('class', 'connection-wrapper'); g.setAttribute('id', id);
 
             const bgLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             bgLine.setAttribute('class', 'connection-bg-line');
             
             const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            line.setAttribute('class', 'connection-line');
+            if (type === 'STRUCTURE') line.setAttribute('class', 'connection-line struct-line');
+            else if (type === 'ACTION') line.setAttribute('class', 'connection-line action-line');
+            else line.setAttribute('class', 'connection-line');
 
             g.appendChild(bgLine); g.appendChild(line);
             svgLayer.appendChild(g);
-
             g.addEventListener('click', (e) => { e.stopPropagation(); setSelection('conn', id); });
         }
 
@@ -599,68 +508,54 @@
             if (isDragging && dragTargetId) {
                 const blockEl = document.getElementById(dragTargetId);
                 if (!blockEl) return;
-                const active = getActiveLayer();
-                
                 const rect = canvas.getBoundingClientRect();
-                let currentX = Math.max(0, Math.min(clientX - dragStartX, rect.width - blockEl.offsetWidth));
-                let currentY = Math.max(0, Math.min(clientY - dragStartY, rect.height - blockEl.offsetHeight));
-
-                blockEl.style.left = currentX + 'px';
-                blockEl.style.top = currentY + 'px';
+                let x = Math.max(0, Math.min(clientX - dragStartX, rect.width - blockEl.offsetWidth));
+                let y = Math.max(0, Math.min(clientY - dragStartY, rect.height - blockEl.offsetHeight));
                 
-                active.blocks[dragTargetId].left = blockEl.style.left;
-                active.blocks[dragTargetId].top = blockEl.style.top;
+                blockEl.style.left = x + 'px'; blockEl.style.top = y + 'px';
+                modelState.definitions.blocks[dragTargetId].left = blockEl.style.left;
+                modelState.definitions.blocks[dragTargetId].top = blockEl.style.top;
                 updateLines();
             }
         }
 
         function updateLines() {
-            const active = getActiveLayer();
+            const active = modelState.definitions;
             svgLayer.querySelectorAll('.connection-wrapper').forEach(g => {
-                const conn = active.connections[g.id];
-                if(!conn) return;
-
-                const getPos = (pId) => {
-                    const pData = active.ports[pId];
-                    const bEl = document.getElementById(pData.blockId);
-                    return {
-                        x: parseInt(bEl.style.left) + (bEl.offsetWidth * (pData.pctX / 100)),
-                        y: parseInt(bEl.style.top) + (bEl.offsetHeight * (pData.pctY / 100)),
-                        edge: pData.edge
-                    };
+                const conn = active.connections[g.id]; if(!conn) return;
+                
+                const getPos = (id) => {
+                    if (id.startsWith('diamond_')) {
+                        const bId = id.replace('diamond_', '');
+                        const bEl = document.getElementById(bId);
+                        return { x: parseInt(bEl.style.left) + (bEl.offsetWidth / 2), y: parseInt(bEl.style.top) + bEl.offsetHeight, edge: 'bottom' };
+                    } else {
+                        const p = active.ports[id]; const bEl = document.getElementById(p.blockId);
+                        return { x: parseInt(bEl.style.left) + (bEl.offsetWidth * (p.pctX / 100)), y: parseInt(bEl.style.top) + (bEl.offsetHeight * (p.pctY / 100)), edge: p.edge };
+                    }
                 };
 
                 try {
                     const p1 = getPos(conn.from); const p2 = getPos(conn.to);
                     const getCtrl = (p) => {
-                        if (p.edge === 'left') return { x: p.x - 45, y: p.y };
-                        if (p.edge === 'right') return { x: p.x + 45, y: p.y };
-                        if (p.edge === 'top') return { x: p.x, y: p.y - 45 };
-                        return { x: p.x, y: p.y + 45 };
+                        if (p.edge === 'left') return { x: p.x - 40, y: p.y };
+                        if (p.edge === 'right') return { x: p.x + 40, y: p.y };
+                        if (p.edge === 'top') return { x: p.x, y: p.y - 40 };
+                        return { x: p.x, y: p.y + 40 };
                     };
-                    
-                    const c1 = getCtrl(p1); const c2 = getCtrl(p2);
-                    const d = `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`;
-                    
+                    const d = `M ${p1.x} ${p1.y} C ${getCtrl(p1).x} ${getCtrl(p1).y}, ${getCtrl(p2).x} ${getCtrl(p2).y}, ${p2.x} ${p2.y}`;
                     g.querySelector('.connection-line').setAttribute('d', d);
                     g.querySelector('.connection-bg-line').setAttribute('d', d);
-                } catch(err) { /* Catch edge conditions gracefully during mid-render transformations */ }
+                } catch(e){}
             });
         }
 
         function onPointerEnd() { if (isDragging) { isDragging = false; dragTargetId = null; saveModel(); } }
 
         function setSelection(type, id) {
-            clearSelection();
-            selectedType = type; selectedId = id;
-            const el = document.getElementById(id);
-            if (!el) return;
-            
-            if (type === 'block') {
-                el.classList.add('selected');
-                btnGrow.disabled = false; btnShrink.disabled = false;
-                if(modelState.currentView === 'DefinitionView') btnActionCtx.disabled = false;
-            }
+            clearSelection(); selectedType = type; selectedId = id;
+            const el = document.getElementById(id); if (!el) return;
+            if (type === 'block' || type === 'diamond') el.classList.add('selected');
             if (type === 'port') el.classList.add('selected');
             if (type === 'conn') document.getElementById(id).classList.add('selected');
             btnDelete.disabled = false;
@@ -668,63 +563,37 @@
 
         function clearSelection() {
             if (selectedType && selectedId) {
-                const el = document.getElementById(selectedId);
-                if (el) el.classList.remove('selected');
-                if (selectedType === 'conn' && document.getElementById(selectedId)) {
-                    document.getElementById(selectedId).classList.remove('selected');
-                }
+                const el = document.getElementById(selectedId); if (el) el.classList.remove('selected');
+                if (selectedType === 'conn' && document.getElementById(selectedId)) document.getElementById(selectedId).classList.remove('selected');
             }
-            selectedType = null; selectedId = null;
-            btnDelete.disabled = true; btnGrow.disabled = true; btnShrink.disabled = true;
-            if(modelState.currentView === 'DefinitionView') btnActionCtx.disabled = true;
-        }
-
-        function resizeBlock(dw, dh) {
-            if (selectedType !== 'block' || !selectedId) return;
-            checkpoint();
-            const active = getActiveLayer();
-            const el = document.getElementById(selectedId);
-            if (!el) return;
-            
-            active.blocks[selectedId].width = Math.max(90, el.offsetWidth + dw) + 'px';
-            active.blocks[selectedId].height = Math.max(60, el.offsetHeight + dh) + 'px';
-            
-            renderActiveView();
-            setSelection('block', selectedId);
-            saveModel();
+            selectedType = null; selectedId = null; btnDelete.disabled = true;
         }
 
         function deleteSelected() {
             if (!selectedType || !selectedId) return;
             checkpoint();
-            const active = getActiveLayer();
+            const active = modelState.definitions;
 
             if (selectedType === 'block') {
-                if (modelState.currentView === 'DefinitionView' && modelState.usages[selectedId]) {
-                    delete modelState.usages[selectedId];
-                }
-                const portsToClean = [...active.blocks[selectedId].ports];
-                portsToClean.forEach(pId => {
-                    for(let cId in active.connections) {
-                        if(active.connections[cId].from === pId || active.connections[cId].to === pId) delete active.connections[cId];
-                    }
+                active.blocks[selectedId].ports.forEach(pId => {
+                    for(let cId in active.connections) { if(active.connections[cId].from === pId || active.connections[cId].to === pId) delete active.connections[cId]; }
                     delete active.ports[pId];
                 });
-                delete active.blocks[selectedId];
-            } else if (selectedType === 'port') {
                 for(let cId in active.connections) {
-                    if(active.connections[cId].from === selectedId || active.connections[cId].to === selectedId) delete active.connections[cId];
+                    if(active.connections[cId].from === 'diamond_'+selectedId || active.connections[cId].to === 'diamond_'+selectedId) delete active.connections[cId];
                 }
-                const bId = active.ports[selectedId].blockId;
-                active.blocks[bId].ports = active.blocks[bId].ports.filter(p => p !== selectedId);
-                delete active.ports[selectedId];
+                delete active.blocks[selectedId];
+            } else if (selectedType === 'port' || selectedType === 'diamond') {
+                for(let cId in active.connections) { if(active.connections[cId].from === selectedId || active.connections[cId].to === selectedId) delete active.connections[cId]; }
+                if (selectedType === 'port') {
+                    const bId = active.ports[selectedId].blockId;
+                    active.blocks[bId].ports = active.blocks[bId].ports.filter(p => p !== selectedId);
+                    delete active.ports[selectedId];
+                }
             } else if (selectedType === 'conn') {
                 delete active.connections[selectedId];
             }
-
-            clearSelection();
-            renderActiveView();
-            saveModel();
+            clearSelection(); renderActiveView(); saveModel();
         }
 
         function checkpoint() { historyStack.push(JSON.parse(JSON.stringify(modelState))); btnUndo.disabled = false; }
@@ -732,13 +601,11 @@
         function loadModel() {
             const raw = localStorage.getItem(STORAGE_KEY);
             if (raw) { modelState = JSON.parse(raw); renderActiveView(); }
-            btnUndo.disabled = historyStack.length === 0;
         }
         function popHistory() {
             if (historyStack.length === 0) return;
             modelState = historyStack.pop();
-            renderActiveView();
-            saveModel();
+            renderActiveView(); saveModel();
             if (historyStack.length === 0) btnUndo.disabled = true;
         }
     </script>
